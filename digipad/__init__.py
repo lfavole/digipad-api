@@ -27,7 +27,7 @@ def export_pads_cmd(args):
         return
 
     for pad_id, pad_title in pads.items():
-        export_pad(pad_id, args.cookie, args.output)
+        export_pad(pad_id, cookie, args.output)
         print(f"Exported pad #{pad_id} ({pad_title})")
 
 
