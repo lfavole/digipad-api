@@ -1,4 +1,3 @@
-import functools
 import json
 import re
 from dataclasses import dataclass, field
@@ -15,26 +14,27 @@ class PadsList:
     admin: dict[int, str] = field(default_factory=dict)
     favourite: dict[int, str] = field(default_factory=dict)
     folder_names: dict[str, str] = field(default_factory=dict)
-    folders: dict[int, str] = field(default_factory=dict)
+    folders: dict[str, dict[int, str]] = field(default_factory=dict)
     all: dict[int, str] = field(default_factory=dict)
     pad_hashes: dict[int, str] = field(default_factory=dict)
 
-    def get_pads(self, pad_ids):
+    def get_pads(self, pad_ids: list[str]):
         ret = {}
-        all_pads = None
 
         for pad_id in pad_ids:
             try:
                 pad_id = int(pad_id)
-                ret[pad_id] = ""
+                ret[pad_id] = self.pad_hashes.get(pad_id, "")
                 continue
             except ValueError:
                 pass
 
             try:
-                *_, pad_id, pad_hash = pad_id.split("/")
-                self.pad_hashes[pad_id] = pad_hash
-                ret[pad_id] = ""
+                *_, pad_id, pad_hash = str(pad_id).rstrip("/").split("/")
+                pad_id = int(pad_id)
+                if pad_hash:
+                    self.pad_hashes[pad_id] = pad_hash
+                ret[pad_id] = self.pad_hashes[pad_id]
                 continue
             except ValueError:
                 pass
@@ -105,7 +105,7 @@ def get_all_pads(digipad_cookie=None):
             pads.all[pad_id] = pad_title
 
     for folder in data["pageProps"]["dossiers"]:
-        pads.folders_names[folder["id"]] = folder["nom"]
+        pads.folder_names[folder["id"]] = folder["nom"]
         pads.folders[folder["id"]] = {
             pad_id: pad_title
             for pad_id, pad_title in pads.all.items()

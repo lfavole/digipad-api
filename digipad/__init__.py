@@ -3,7 +3,7 @@ import argparse
 from .edit import comment_block, create_block
 from .export import export_pad
 from .get_pads import get_all_pads, get_userinfo
-from .utils import get_cookie, COOKIE_FILE
+from .utils import COOKIE_FILE, get_cookie
 
 __version__ = "2024.2.22"
 

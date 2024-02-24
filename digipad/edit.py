@@ -1,12 +1,11 @@
 import functools
 import random
 import time
-from dataclasses import dataclass
 from urllib.parse import quote
 
 import socketio
 
-from .utils import get_anon_cookie, get_cookie, get_userinfo, UserInfo
+from .utils import UserInfo, get_anon_cookie, get_userinfo
 
 
 @functools.lru_cache

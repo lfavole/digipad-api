@@ -61,7 +61,7 @@ def get_userinfo(digipad_cookie=None, pad_id=None, pad_hash=None) -> UserInfo:
 
     req = requests.get(
         "https://digipad.app",
-        cookies={"digipad": digipad_cookie},
+        cookies={"digipad": digipad_cookie or ""},
     )
     if not req.history or req.history[0].status_code < 300 or req.history[0].status_code >= 400:
         raise ValueError("Not logged in")
