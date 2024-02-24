@@ -13,6 +13,7 @@ def create_block_cmd(args):
     all_pads = get_all_pads(cookie)
     pads = all_pads.get_pads(args.LIST)
     for pad_id in pads:
+        print(f"Creating block on {pad_id}{' (' + all_pads.all[pad_id] + ')' if pad_id in all_pads.all else ''}...")
         pad_hash = all_pads.pad_hashes[pad_id]
         block_id = create_block(pad_id, pad_hash, args.title, args.text, column_n=args.column_n, digipad_cookie=cookie)
         if args.comment:
