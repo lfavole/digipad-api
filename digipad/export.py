@@ -6,6 +6,8 @@ from pathlib import Path
 
 import requests
 
+from digipad.utils import get_userinfo
+
 
 def export_pad(url_or_id, digipad_cookie, directory=None):
     if isinstance(url_or_id, int):
@@ -16,9 +18,10 @@ def export_pad(url_or_id, digipad_cookie, directory=None):
             raise ValueError("Can't get pad ID")
         pad_id = int(match[1])
 
+    userinfo = get_userinfo(digipad_cookie)
     req = requests.post(
         "https://digipad.app/api/exporter-pad",
-        json={"padId": pad_id, "identifiant": "lfavole", "admin": ""},
+        json={"padId": pad_id, "identifiant": userinfo.username, "admin": ""},
         cookies={"digipad": digipad_cookie},
     )
     req.raise_for_status()
