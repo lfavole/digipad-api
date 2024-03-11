@@ -1,4 +1,5 @@
 import argparse
+from urllib.parse import unquote
 
 from .edit import comment_block, create_block
 from .export import export_pad
@@ -48,7 +49,7 @@ def list_pads_cmd(args):
 
 
 def set_cookie_cmd(args):
-    cookie = args.COOKIE
+    cookie = unquote(args.COOKIE)
     if not get_userinfo(cookie).username:
         raise ValueError("Not logged in")
     COOKIE_FILE.write_text(cookie, encoding="utf-8")

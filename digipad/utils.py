@@ -24,7 +24,7 @@ COOKIE_FILE = Path.home() / ".digipad_cookie"
 
 def get_cookie(args=None, needed=True):
     if args and args.cookie is not None:
-        return args.cookie
+        return unquote(args.cookie)
 
     if COOKIE_FILE.exists():
         return COOKIE_FILE.read_text(encoding="utf-8")
