@@ -35,6 +35,18 @@ def connect(pad_id, pad_hash=None, digipad_cookie=None):
     return sio, UserInfo(user["identifiant"], user["nom"], user["couleur"])
 
 
+def run_command(pad_id, pad_hash, digipad_cookie, command, *args):
+    sio, user_info = connect(pad_id, pad_hash, digipad_cookie)
+    sio.emit(
+        command,
+        args,
+    )
+    ret = sio.receive()
+    if ret[0] != command:
+        raise ValueError(f"Can't add block ({ret})")
+    return ret[1]
+
+
 def create_block(pad_id, pad_hash, title, text, hidden=False, column_n=0, block_id=None, digipad_cookie=None):
     digipad_cookie = digipad_cookie or get_anon_cookie(pad_id, pad_hash)
     sio, user_info = connect(pad_id, pad_hash, digipad_cookie)
@@ -85,3 +97,19 @@ def comment_block(pad_id, pad_hash, block_id, title, text, hidden=False, column_
     ret = sio.receive()[0]
     if ret != "commenterbloc":
         raise ValueError(f"Can't comment block ({ret})")
+
+
+def rename_column(pad_id, pad_hash, column_number, column_title, digipad_cookie=None):
+    sio, user_info = connect(pad_id, pad_hash, digipad_cookie)
+    sio.emit(
+        "modifiertitrecolonne",
+        (
+            str(pad_id),
+            column_title,
+            column_number,
+            user_info.username,
+        ),
+    )
+    ret = sio.receive()[0]
+    if ret != "modifiertitrecolonne":
+        raise ValueError(f"Can't rename column ({ret})")

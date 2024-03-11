@@ -1,7 +1,7 @@
 import argparse
 from urllib.parse import unquote
 
-from .edit import comment_block, create_block
+from .edit import comment_block, create_block, rename_column
 from .export import export_pad
 from .get_pads import get_all_pads, get_userinfo
 from .utils import COOKIE_FILE, get_cookie
@@ -19,6 +19,16 @@ def create_block_cmd(args):
         block_id = create_block(pad_id, pad_hash, args.title, args.text, column_n=args.column_n, digipad_cookie=cookie)
         if args.comment:
             comment_block(pad_id, pad_hash, block_id, args.title, args.comment, digipad_cookie=cookie)
+
+
+def rename_column_cmd(args):
+    cookie = get_cookie(args, False)
+    all_pads = get_all_pads(cookie)
+    pads = all_pads.get_pads(args.LIST)
+    for pad_id in pads:
+        print(f"Renaming column on {pad_id}{' (' + all_pads.all[pad_id] + ')' if pad_id in all_pads.all else ''}...")
+        pad_hash = all_pads.pad_hashes[pad_id]
+        rename_column(pad_id, pad_hash, args.column_n, args.title, digipad_cookie=cookie)
 
 
 def export_pads_cmd(args):
@@ -68,6 +78,12 @@ def main():
     parser_create_block.add_argument("--column-n", default=0, help="column number (starting from 0)")
     parser_create_block.add_argument("--comment", help="comment to add to the block")
     parser_create_block.set_defaults(func=create_block_cmd)
+
+    parser_create_block = subparsers.add_parser("rename-column", help="Rename a column in a pad")
+    parser_create_block.add_argument("LIST", nargs="*", default=("created",), help="pads to edit")
+    parser_create_block.add_argument("--title", default="", help="title of the column")
+    parser_create_block.add_argument("--column-n", help="column number (starting from 0)")
+    parser_create_block.set_defaults(func=rename_column_cmd)
 
     parser_export = subparsers.add_parser("export", help="Export pads")
     parser_export.add_argument("LIST", nargs="*", default=("created",), help="pad list to export")
