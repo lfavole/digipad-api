@@ -94,7 +94,7 @@ def main():
     parser_list.add_argument("LIST", nargs="*", default=("created",), help="pad list to export")
     parser_list.set_defaults(func=list_pads_cmd)
 
-    parser_export = subparsers.add_parser("set-cookie", help="Save the Digipd cookie for later use")
+    parser_export = subparsers.add_parser("set-cookie", help="Save the Digipad cookie for later use")
     parser_export.add_argument("COOKIE", help="Digipad cookie")
     parser_export.set_defaults(func=set_cookie_cmd)
 
