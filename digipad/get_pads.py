@@ -1,115 +1,107 @@
-import json
-import re
 from dataclasses import dataclass, field
 
-import requests
+from .edit import Pad, PadList
 
-from .utils import get_userinfo
+NOT_PROVIDED = object()
 
 
 @dataclass
-class PadsList:
-    created: dict[int, str] = field(default_factory=dict)
-    visited: dict[int, str] = field(default_factory=dict)
-    admin: dict[int, str] = field(default_factory=dict)
-    favourite: dict[int, str] = field(default_factory=dict)
+class PadsOnAccount:
+    """
+    A list of all pads in an account.
+    """
+    created: PadList = field(default_factory=PadList)
+    visited: PadList = field(default_factory=PadList)
+    admin: PadList = field(default_factory=PadList)
+    favourite: PadList = field(default_factory=PadList)
     folder_names: dict[str, str] = field(default_factory=dict)
-    folders: dict[str, dict[int, str]] = field(default_factory=dict)
-    all: dict[int, str] = field(default_factory=dict)
+    folders: dict[str, PadList] = field(default_factory=dict)
     pad_hashes: dict[int, str] = field(default_factory=dict)
 
-    def get_pads(self, pad_ids: list[str]):
-        ret = {}
+    @property
+    def all(self):
+        """
+        All the known pads on the account.
+        """
+        return PadList([
+            *self.created,
+            *self.visited,
+            *self.admin,
+            *self.favourite,
+        ])
+
+    def get(self, pad_id: int | str, default=NOT_PROVIDED):
+        """
+        Return ONE pad with its ID, URL, folder name... (see the documentation for `get_all`).
+        You can specify a default value.
+
+        If more than one pad is returned, the function raises an error.
+        """
+        ret = self.get_all([pad_id])
+        if len(ret) > 1:
+            raise ValueError("Multiple pads returned")
+        if not ret:
+            if default is not NOT_PROVIDED:
+                return default
+            raise KeyError(f"Couldn't find pad {pad_id}")
+        return ret[0]
+
+    def get_all(self, pad_ids: list[int | str]):
+        """
+        Return the pad IDs and hashes corresponding to the given IDs.
+        You must give the URL (at least its end with the ID and the hash)
+        if you haven't ever opened the pad on the account.
+
+        You can use the keywords `created`, `visited`, `admin`, `favourite`, `all` or a folder name.
+        """
+        ret: list[Pad] = []
 
         for pad_id in pad_ids:
+            if pad_id in ("created", "visited", "admin", "favourite", "all"):
+                ret.extend(getattr(self, pad_id))
+                continue
+
             try:
                 pad_id = int(pad_id)
-                ret[pad_id] = self.pad_hashes.get(pad_id, "")
-                continue
             except ValueError:
                 pass
+            else:
+                ret.append(Pad(pad_id, self.pad_hashes.get(pad_id, "")))
+                continue
 
             try:
                 *_, pad_id, pad_hash = str(pad_id).rstrip("/").split("/")
                 pad_id = int(pad_id)
-                if pad_hash:
-                    self.pad_hashes[pad_id] = pad_hash
-                ret[pad_id] = self.pad_hashes[pad_id]
-                continue
             except ValueError:
                 pass
-
-            if pad_id in ("created", "visited", "admin", "favourite", "all"):
-                ret.update(getattr(self, pad_id))
+            else:
+                if pad_hash:
+                    # save the hash for future use
+                    self.pad_hashes[pad_id] = pad_hash
+                ret.append(Pad(pad_id, self.pad_hashes.get(pad_id, "")))
                 continue
 
-            ret.update(self.get_pads_in_folder(pad_id))
+            ret.extend(self.get_pads_in_folder(pad_id))
 
-        return ret
+        # deduplicate the list
+        ret2 = []
+        for pad in ret:
+            if pad not in ret2:
+                ret2.append(pad)
+
+        return ret2
 
     def get_pads_in_folder(self, folder_name):
+        """
+        Return the pad IDs and hashes in a folder.
+        """
         if folder_name in self.folders:
             # folder ID
             return self.folders[folder_name]
 
         # folder name
-        for folder_id, folder_name_to_try in self.folder_names:
+        for folder_id, folder_name_to_try in self.folder_names.items():
             if folder_name_to_try == folder_name:
                 return self.folders[folder_id]
 
         raise ValueError(f"Can't find folder {folder_name}")
-
-
-def get_all_pads(digipad_cookie=None):
-    if not digipad_cookie:
-        return PadsList()
-
-    req = requests.get(
-        "https://digipad.app/u/" + get_userinfo(digipad_cookie).username,
-        allow_redirects=False,
-        cookies={"digipad": digipad_cookie},
-    )
-    if 300 <= req.status_code < 400:
-        raise ValueError("Not logged in")
-    req.raise_for_status()
-
-    match = re.search(r'<script id="vike_pageContext"[^>]*>(.*?)</script>', req.text)
-    if not match:
-        raise ValueError("Can't get pads list")
-
-    data = json.loads(match[1])
-
-    pad_hashes = {}
-
-    def format_pads(pads: dict) -> dict[int, str]:
-        ret = {}
-        for pad in pads:
-            pad_hashes[pad["id"]] = pad["token"]
-            ret[pad["id"]] = pad["titre"]
-        return ret
-
-    pads = PadsList(
-        created=format_pads(data["pageProps"]["padsCrees"]),
-        visited=format_pads(data["pageProps"]["padsRejoints"]),
-        admin=format_pads(data["pageProps"]["padsAdmins"]),
-        favourite=format_pads(data["pageProps"]["padsFavoris"]),
-        pad_hashes=pad_hashes,
-    )
-    for pad_id, pad_title in {
-        **pads.created,
-        **pads.visited,
-        **pads.admin,
-        **pads.favourite,
-    }.items():
-        if pad_id not in pads.all:
-            pads.all[pad_id] = pad_title
-
-    for folder in data["pageProps"]["dossiers"]:
-        pads.folder_names[folder["id"]] = folder["nom"]
-        pads.folders[folder["id"]] = {
-            pad_id: pad_title
-            for pad_id, pad_title in pads.all.items()
-            if pad_id in folder["pads"]
-        }
-
-    return pads
