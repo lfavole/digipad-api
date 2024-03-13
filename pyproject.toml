@@ -21,6 +21,7 @@ keywords = ["digipad", "education"]
 dependencies = [
     "python-socketio",
 	"requests",
+    "tabulate",
 ]
 requires-python = ">=3.7"
 
