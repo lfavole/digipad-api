@@ -42,6 +42,7 @@ def run_command(pad_id, pad_hash, digipad_cookie, command, *args):
         args,
     )
     ret = sio.receive()
+    sio.disconnect()
     if ret[0] != command:
         raise ValueError(f"Can't add block ({ret})")
     return ret[1]
@@ -75,6 +76,7 @@ def create_block(pad_id, pad_hash, title, text, hidden=False, column_n=0, block_
         ),
     )
     ret = sio.receive()[0]
+    sio.disconnect()
     if ret != "ajouterbloc":
         raise ValueError(f"Can't add block ({ret})")
     return block_id
@@ -95,6 +97,7 @@ def comment_block(pad_id, pad_hash, block_id, title, text, hidden=False, column_
         ),
     )
     ret = sio.receive()[0]
+    sio.disconnect()
     if ret != "commenterbloc":
         raise ValueError(f"Can't comment block ({ret})")
 
@@ -111,5 +114,6 @@ def rename_column(pad_id, pad_hash, column_number, column_title, digipad_cookie=
         ),
     )
     ret = sio.receive()[0]
+    sio.disconnect()
     if ret != "modifiertitrecolonne":
         raise ValueError(f"Can't rename column ({ret})")
