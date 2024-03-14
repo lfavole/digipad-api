@@ -1,67 +1,120 @@
-import argparse
-from getpass import getpass
 import json
+from dataclasses import dataclass
 from urllib.parse import unquote
-import requests
 
+import click
+import requests
 from tabulate import tabulate
 
 from .session import Session
-
 from .utils import COOKIE_FILE, get_userinfo
 
 __version__ = "2024.2.22"
 
 
-def create_block_cmd(args):
-    """Handler for digipad create-block."""
-    pads = Session(args).pads.get_all(args.LIST)
+@dataclass
+class Options:
+    """Global command line options."""
+    delay: int
+    cookie: str
+
+
+pass_opts = click.make_pass_decorator(Options)
+
+
+@click.group()
+@click.version_option(__version__)
+@click.option("--delay", type=int, default=0, help="delay between operations")
+@click.option("--cookie", help="Digipad cookie")
+@click.pass_context
+def cli(ctx, delay, cookie):
+    """Main command that handles the default parameters."""
+    ctx.obj = Options(delay, cookie)
+
+
+@cli.command()
+@click.argument("PADS", nargs=-1, required=True)
+@click.option("--title", default="", help="title of the block")
+@click.option("--text", default="", help="text of the block", required=True)
+@click.option("--column-n", default=0, help="column number (starting from 0)")
+@click.option("--hidden", is_flag=True, help="if specified, hide the block")
+@click.option("--comment", help="comment to add to the block")
+@pass_opts
+def create_block(opts, pads, title, text, column_n, hidden, comment):
+    """Create a block in a pad."""
+    pads = Session(opts).pads.get_all(pads)
     for pad in pads:
         print(f"Creating block on {pad}...")
-        block_id = pad.create_block(args.title, args.text, args.hidden, args.column_n)
-        if args.comment:
-            pad.comment_block(block_id, args.title, args.comment)
+        block_id = pad.create_block(title, text, hidden, column_n)
+        if comment:
+            pad.comment_block(block_id, title, comment)
 
 
-def rename_column_cmd(args):
-    """Handler for digipad rename-column."""
-    pads = Session(args).pads.get_all(args.LIST)
+@cli.command()
+@click.argument("PADS", nargs=-1, required=True)
+@click.option("--title", required=True, help="title of the column")
+@click.option("--column-n", required=True, help="column number (starting from 0)")
+@pass_opts
+def rename_column(opts, pads, title, column_n):
+    """Rename a column in a pad."""
+    pads = Session(opts).pads.get_all(pads)
     for pad in pads:
         print(f"Renaming column on {pad}...")
-        pad.rename_column(args.column_n, args.title)
+        pad.rename_column(column_n, title)
 
 
-def export_pads_cmd(args):
-    """Handler for digipad export."""
-    pads = Session(args).pads.get_all(args.LIST)
+@cli.command()
+@click.argument("PADS", nargs=-1, required=True)
+@click.option("-o", "--output", help="output directory")
+@pass_opts
+def export(opts, pads, output):
+    """Export pads."""
+    pads = Session(opts).pads.get_all(pads)
     if not pads:
         print("No pad to export")
         return
 
     for pad in pads:
-        pad.export(args.output)
+        pad.export(output)
         print(f"Exported pad {pad}")
 
 
-def list_pads_cmd(args):
-    """Handler for digipad list."""
-    pads = Session(args).pads.get_all(args.LIST)
+@cli.command()
+@click.argument("PADS", nargs=-1, required=True)
+@click.option("-f", "--format", type=click.Choice(["table", "json"]), default="table", help="output format")
+@click.option("-v", "--verbose", is_flag=True, help="print more information about pads")
+@pass_opts
+def list(opts, pads, format, verbose):
+    """List pads."""
+    pads = Session(opts).pads.get_all(pads)
 
     verbose_names = {
         "id": "Pad ID",
         "hash": "Pad hash",
-        "name": "Pad name",
+        "title": "Pad title",
+        "access": "Access",
         "code": "PIN code",
+        "columns": "Columns",
     }
 
     data = []
     for pad in pads:
-        data.append({
-            "id": pad.id,
-            "hash": pad.hash,
-        })
+        if verbose:
+            data.append({
+                "id": pad.id,
+                "hash": pad.hash,
+                "title": pad.title,
+                "access": pad.access,
+                "code": pad.code,
+                "columns": pad.columns,
+            })
+        else:
+            data.append({
+                "id": pad.id,
+                "title": pad.title,
+            })
 
-    if args.format == "json":
+    if format == "json":
         print(json.dumps(data))
     else:
         if not pads:
@@ -80,11 +133,12 @@ def list_pads_cmd(args):
         print(f"{len(pads)} {'pads' if len(pads) >= 2 else 'pad'}")
 
 
-def login_cmd(args):
-    """Handler for digipad login."""
-    username = args.USERNAME or input("Username: ")
-    password = args.PASSWORD or getpass("Password: ")
-
+@cli.command()
+@click.option("--username", prompt="Username")
+@click.option("--password", prompt="Password", hide_input=True)
+@click.option("--print-cookie", is_flag=True, help="print the cookie and don't save it")
+def login(username, password, print_cookie):
+    """Log into Digipad and save the cookie."""
     req = requests.post(
         "https://digipad.app/api/connexion",
         json={
@@ -113,13 +167,30 @@ def login_cmd(args):
         raise ValueError("Not logged in, double-check your username and password")
 
     print(f"Logged in as {userinfo}")
+    if print_cookie:
+        print(f"Cookie: {cookie}")
+        return
+
     COOKIE_FILE.write_text(cookie, encoding="utf-8")
     print(f"Cookie saved to {COOKIE_FILE}")
 
 
-def set_cookie_cmd(args):
-    """Handler for digipad set-cookie."""
-    cookie = unquote(args.COOKIE)
+@cli.command()
+@click.argument("COOKIE", required=False)
+@pass_opts
+def userinfo(opts, cookie):
+    """Print information about the current logged-in user or a specified cookie."""
+    userinfo = Session(cookie or opts).userinfo
+    print(f"Logged in as {userinfo}")
+    if not userinfo:
+        print("Anonymous session")
+
+
+@cli.command(help="Save the Digipad cookie for later use")
+@click.argument("COOKIE")
+def set_cookie(cookie):
+    """Save the Digipad cookie for later use."""
+    cookie = unquote(cookie)
 
     userinfo = get_userinfo(cookie)
     if not userinfo:
@@ -130,48 +201,15 @@ def set_cookie_cmd(args):
     print(f"Cookie saved to {COOKIE_FILE}")
 
 
+@cli.command(help="Delete the Digipad cookie file and log out")
+def logout():
+    """Handler for digipad logout."""
+    COOKIE_FILE.unlink(True)
+    print("Logged out")
+
+
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--cookie", help="Digipad cookie")
-    subparsers = parser.add_subparsers(required=True)
-
-    parser_create_block = subparsers.add_parser("create-block", help="Create a block in a pad")
-    parser_create_block.add_argument("LIST", nargs="*", default=("created",), help="pads to edit")
-    parser_create_block.add_argument("--title", default="", help="title of the block")
-    parser_create_block.add_argument("--text", default="", help="text of the block", required=True)
-    parser_create_block.add_argument("--column-n", default=0, help="column number (starting from 0)")
-    parser_create_block.add_argument("--hidden", action="store_true", help="if specified, hide the block")
-    parser_create_block.add_argument("--comment", help="comment to add to the block")
-    parser_create_block.set_defaults(func=create_block_cmd)
-
-    parser_rename_column = subparsers.add_parser("rename-column", help="Rename a column in a pad")
-    parser_rename_column.add_argument("LIST", nargs="*", default=("created",), help="pads to edit")
-    parser_rename_column.add_argument("--title", default="", help="title of the column")
-    parser_rename_column.add_argument("--column-n", help="column number (starting from 0)")
-    parser_rename_column.set_defaults(func=rename_column_cmd)
-
-    parser_export = subparsers.add_parser("export", help="Export pads")
-    parser_export.add_argument("LIST", nargs="*", default=("created",), help="pad list to export")
-    parser_export.add_argument("-o", "--output", help="output directory")
-    parser_export.set_defaults(func=export_pads_cmd)
-
-    parser_list = subparsers.add_parser("list", help="List pads")
-    parser_list.add_argument("LIST", nargs="*", default=("created",), help="pad list to export")
-    parser_list.add_argument("-f", "--format", choices=["table", "json"], default="table", help="output format")
-    parser_list.add_argument("-v", "--verbose", action="store_true", help="print more information about pads")
-    parser_list.set_defaults(func=list_pads_cmd)
-
-    parser_login = subparsers.add_parser("login", help="Log into Digipad and save the cookie")
-    parser_login.add_argument("USERNAME", nargs="?", help="Digipad username")
-    parser_login.add_argument("PASSWORD", nargs="?", help="Digipad password")
-    parser_login.set_defaults(func=login_cmd)
-
-    parser_set_cookie = subparsers.add_parser("set-cookie", help="Save the Digipad cookie for later use")
-    parser_set_cookie.add_argument("COOKIE", help="Digipad cookie")
-    parser_set_cookie.set_defaults(func=set_cookie_cmd)
-
-    args = parser.parse_args()
-    args.func(args)
+    cli.main()
 
 
 if __name__ == "__main__":

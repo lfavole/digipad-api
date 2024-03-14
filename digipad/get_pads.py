@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 
-from .edit import Pad, PadList
+from .edit import PadList
 
 NOT_PROVIDED = object()
 
@@ -54,7 +54,7 @@ class PadsOnAccount:
 
         You can use the keywords `created`, `visited`, `admin`, `favourite`, `all` or a folder name.
         """
-        ret: list[Pad] = []
+        ret = []
 
         for pad_id in pad_ids:
             if pad_id in ("created", "visited", "admin", "favourite", "all"):
@@ -72,7 +72,7 @@ class PadsOnAccount:
             if pad not in ret2:
                 ret2.append(pad)
 
-        return ret2
+        return PadList(ret2)
 
     def get_pads_in_folder(self, folder_name):
         """

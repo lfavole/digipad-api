@@ -1,9 +1,11 @@
-from argparse import Namespace
+import datetime as dt
+import json
+
 import requests
 
-from .edit import PadConnection, PadList
-from .get_pads import Pad, PadsOnAccount
-from .utils import extract_data, get_cookie_from_args, get_userinfo
+from .edit import Pad, PadConnection, PadList
+from .get_pads import PadsOnAccount
+from .utils import UserInfo, extract_data, get_cookie_from_args, get_userinfo
 
 
 class Session:
@@ -11,7 +13,8 @@ class Session:
     A session (logged-in or anonymous account) on the Digipad website.
     """
     def __init__(self, cookie=None):
-        if isinstance(cookie, Namespace):
+        from .__init__ import Options
+        if isinstance(cookie, Options):
             cookie = get_cookie_from_args(cookie, False)
         self.userinfo = get_userinfo(cookie)
 
@@ -57,7 +60,16 @@ class Session:
             ret = PadList()
             for pad in pads:
                 pad_hashes[pad["id"]] = pad["token"]
-                pad = Pad(pad["id"], pad["token"])
+                pad = Pad(
+                    id=pad["id"],
+                    hash=pad["token"],
+                    title=pad["titre"],
+                    code=pad["code"],
+                    access=pad["acces"],
+                    columns=json.loads(pad["colonnes"]),
+                    creator=UserInfo.from_json(pad),
+                    creation_date=dt.datetime.fromisoformat(pad["date"]),
+                )
                 pad.connection = PadConnection(pad, self)
                 ret.append(pad)
             return ret

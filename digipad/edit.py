@@ -1,14 +1,14 @@
 import datetime as dt
-from dataclasses import dataclass, field
 import functools
 import json
-from pathlib import Path
 import random
 import time
-from urllib.parse import quote
 import zipfile
-import requests
+from dataclasses import dataclass, field
+from pathlib import Path
+from urllib.parse import quote
 
+import requests
 import socketio
 
 from .utils import UserInfo, get_anon_userinfo
@@ -83,7 +83,12 @@ class Pad:
     """
     id: int
     hash: str = ""
+    title: str = ""
+    code: int | None = None
+    access: str = "public"
     columns: list[str] = field(default_factory=list)
+    creator: UserInfo = field(default_factory=UserInfo)
+    creation_date: dt.datetime | None = None
     _connection: PadConnection | None = None
 
     def __hash__(self):
