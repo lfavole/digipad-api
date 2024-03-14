@@ -21,6 +21,8 @@ class Options:
 
 pass_opts = click.make_pass_decorator(Options)
 
+pad_argument = click.argument("PADS", nargs=-1, required=True)
+
 
 @click.group()
 @click.version_option(__version__)
@@ -33,7 +35,7 @@ def cli(ctx, delay, cookie):
 
 
 @cli.command()
-@click.argument("PADS", nargs=-1, required=True)
+@pad_argument
 @click.option("--title", default="", help="title of the block")
 @click.option("--text", default="", help="text of the block", required=True)
 @click.option("--column-n", default=0, help="column number (starting from 0)")
@@ -51,7 +53,7 @@ def create_block(opts, pads, title, text, column_n, hidden, comment):
 
 
 @cli.command()
-@click.argument("PADS", nargs=-1, required=True)
+@pad_argument
 @click.option("--title", required=True, help="title of the column")
 @click.option("--column-n", required=True, help="column number (starting from 0)")
 @pass_opts
@@ -64,7 +66,7 @@ def rename_column(opts, pads, title, column_n):
 
 
 @cli.command()
-@click.argument("PADS", nargs=-1, required=True)
+@pad_argument
 @click.option("-o", "--output", help="output directory")
 @pass_opts
 def export(opts, pads, output):
@@ -80,7 +82,7 @@ def export(opts, pads, output):
 
 
 @cli.command()
-@click.argument("PADS", nargs=-1, required=True)
+@pad_argument
 @click.option("-f", "--format", type=click.Choice(["table", "json"]), default="table", help="output format")
 @click.option("-v", "--verbose", is_flag=True, help="print more information about pads")
 @pass_opts
