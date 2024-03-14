@@ -90,7 +90,7 @@ class Pad:
         return hash(self.id)
 
     def __str__(self):
-        return f"#{id}"
+        return f"#{self.id}"
 
     @property
     def connection(self):
@@ -207,16 +207,19 @@ class PadList(list[Pad]):
         """Search for a pad in the list and return it, otherwise create a `Pad` object without metadata."""
         pad_hash = ""
         if not isinstance(pad_id, int):
-            url = pad_id
             try:
-                *_, pad_id, pad_hash = str(pad_id).rstrip("/").split("/")
-                if pad_id == "p":
-                    # incomplete URL without hash
-                    pad_id = pad_hash
-                    pad_hash = ""
                 pad_id = int(pad_id)
-            except ValueError as err:
-                raise ValueError(f"Could not extract pad ID from the URL {url}") from err
+            except ValueError:
+                url = pad_id
+                try:
+                    *_, pad_id, pad_hash = str(pad_id).rstrip("/").split("/")
+                    if pad_id == "p":
+                        # incomplete URL without hash
+                        pad_id = pad_hash
+                        pad_hash = ""
+                    pad_id = int(pad_id)
+                except ValueError as err:
+                    raise ValueError(f"Could not extract pad ID from the URL {url}") from err
 
         for pad in self:
             if pad.id == pad_id:

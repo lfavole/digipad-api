@@ -8,15 +8,12 @@ from .utils import extract_data, get_cookie_from_args, get_userinfo
 
 class Session:
     """
-    A session (logged-in account) on the Digipad website.
+    A session (logged-in or anonymous account) on the Digipad website.
     """
     def __init__(self, cookie=None):
-        if cookie:
-            if isinstance(cookie, Namespace):
-                cookie = get_cookie_from_args(cookie, False)
-            self.userinfo = get_userinfo(cookie)
-        else:
-            self.userinfo = None
+        if isinstance(cookie, Namespace):
+            cookie = get_cookie_from_args(cookie, False)
+        self.userinfo = get_userinfo(cookie)
 
     @property
     def cookie(self):
@@ -53,7 +50,7 @@ class Session:
 
         pad_hashes = {}
 
-        def format_pads(pads: dict) -> list[Pad]:
+        def format_pads(pads: dict) -> PadList:
             """
             Returns a dict that maps pad IDs to pad titles from a Digipad dict.
             """

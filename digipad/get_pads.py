@@ -62,26 +62,9 @@ class PadsOnAccount:
                 continue
 
             try:
-                pad_id = int(pad_id)
+                ret.append(self.all.get(pad_id))
             except ValueError:
-                pass
-            else:
-                ret.append(Pad(pad_id, self.pad_hashes.get(pad_id, "")))
-                continue
-
-            try:
-                *_, pad_id, pad_hash = str(pad_id).rstrip("/").split("/")
-                pad_id = int(pad_id)
-            except ValueError:
-                pass
-            else:
-                if pad_hash:
-                    # save the hash for future use
-                    self.pad_hashes[pad_id] = pad_hash
-                ret.append(Pad(pad_id, self.pad_hashes.get(pad_id, "")))
-                continue
-
-            ret.extend(self.get_pads_in_folder(pad_id))
+                ret.extend(self.get_pads_in_folder(pad_id))
 
         # deduplicate the list
         ret2 = []
