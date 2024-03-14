@@ -6,6 +6,7 @@ import click
 import requests
 from tabulate import tabulate
 
+from .progress import Progress
 from .session import Session
 from .utils import COOKIE_FILE, get_userinfo
 
@@ -46,10 +47,12 @@ def create_block(opts, pads, title, text, column_n, hidden, comment):
     """Create a block in a pad."""
     pads = Session(opts).pads.get_all(pads)
     for pad in pads:
-        print(f"Creating block on {pad}...")
-        block_id = pad.create_block(title, text, hidden, column_n)
-        if comment:
-            pad.comment_block(block_id, title, comment)
+        with Progress(f"Creating block on {pad}") as prog:
+            block_id = pad.create_block(title, text, hidden, column_n)
+            prog.end()
+            if comment:
+                prog.start("Commenting")
+                pad.comment_block(block_id, title, comment)
 
 
 @cli.command()
@@ -61,8 +64,8 @@ def rename_column(opts, pads, title, column_n):
     """Rename a column in a pad."""
     pads = Session(opts).pads.get_all(pads)
     for pad in pads:
-        print(f"Renaming column on {pad}...")
-        pad.rename_column(column_n, title)
+        with Progress(f"Renaming column on {pad}"):
+            pad.rename_column(column_n, title)
 
 
 @cli.command()
@@ -77,8 +80,8 @@ def export(opts, pads, output):
         return
 
     for pad in pads:
-        pad.export(output)
-        print(f"Exported pad {pad}")
+        with Progress(f"Exporting pad {pad}"):
+            pad.export(output)
 
 
 @cli.command()
