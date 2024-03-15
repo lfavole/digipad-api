@@ -1,5 +1,6 @@
 import datetime as dt
 import json
+from flask.sessions import SessionMixin
 
 import requests
 
@@ -16,7 +17,13 @@ class Session:
         from .__init__ import Options
         if isinstance(cookie, Options):
             cookie = get_cookie_from_args(cookie, False)
-        self.userinfo = get_userinfo(cookie)
+        elif isinstance(cookie, SessionMixin):
+            cookie = cookie.get("digipad_cookie")
+
+        if cookie:
+            self.userinfo = get_userinfo(cookie)
+        else:
+            self.userinfo = None
 
     @property
     def cookie(self):

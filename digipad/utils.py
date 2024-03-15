@@ -24,6 +24,7 @@ class UserInfo:
     language: str = ""
     logged_in: bool = True
     cookie: str = ""
+    connection_error: bool = False
 
     def __bool__(self):
         return self.logged_in
@@ -101,7 +102,10 @@ def get_anon_userinfo(pad_id, pad_hash):
     """
     Return anonymous user information from a pad ID and a hash.
     """
-    req = requests.get(f"https://digipad.app/p/{pad_id}/{pad_hash}")
+    try:
+        req = requests.get(f"https://digipad.app/p/{pad_id}/{pad_hash}")
+    except OSError:
+        return UserInfo(connection_error=True)
 
     cookie = unquote(req.cookies["digipad"])
     data = extract_data(req)
@@ -113,10 +117,13 @@ def get_userinfo(digipad_cookie):
     """
     Return user information from a Digipad cookie.
     """
-    req = requests.get(
-        "https://digipad.app",
-        cookies={"digipad": digipad_cookie},
-    )
+    try:
+        req = requests.get(
+            "https://digipad.app",
+            cookies={"digipad": digipad_cookie},
+        )
+    except OSError:
+        return UserInfo(connection_error=True)
     if not req.history or not 300 <= req.history[0].status_code < 400:
         return UserInfo(logged_in=False)
 
@@ -139,3 +146,31 @@ def extract_data(response: requests.Response):
         raise ValueError("Can't extract data from response")
 
     return json.loads(match[1])
+
+
+def login(username, password):
+    """Log into Digipad and return the corresponding userinfo."""
+    req = requests.post(
+        "https://digipad.app/api/connexion",
+        json={
+            "identifiant": username,
+            "motdepasse": password,
+        },
+    )
+    req.raise_for_status()
+
+    cookie = None
+    for header, value in req.headers.items():
+        if header != "Set-Cookie":
+            continue
+        value, _, _ = value.partition(";")
+        key, _, value = value.partition("=")
+        if key != "digipad":
+            continue
+        cookie = unquote(value)
+        break
+
+    if cookie is None:
+        raise RuntimeError("Can't get Digipad cookie")
+
+    return get_userinfo(cookie)

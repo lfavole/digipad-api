@@ -1,14 +1,17 @@
 import json
 from dataclasses import dataclass
+import os
+from pathlib import Path
+import random
 from urllib.parse import unquote
+import webbrowser
 
 import click
-import requests
 from tabulate import tabulate
 
 from .progress import Progress
 from .session import Session
-from .utils import COOKIE_FILE, get_userinfo
+from .utils import COOKIE_FILE, get_userinfo, login as digipad_login
 
 __version__ = "2024.2.22"
 
@@ -144,39 +147,16 @@ def list(opts, pads, format, verbose):
 @click.option("--print-cookie", is_flag=True, help="print the cookie and don't save it")
 def login(username, password, print_cookie):
     """Log into Digipad and save the cookie."""
-    req = requests.post(
-        "https://digipad.app/api/connexion",
-        json={
-            "identifiant": username,
-            "motdepasse": password,
-        },
-    )
-    req.raise_for_status()
-
-    cookie = None
-    for header, value in req.headers.items():
-        if header != "Set-Cookie":
-            continue
-        value, _, _ = value.partition(";")
-        key, _, value = value.partition("=")
-        if key != "digipad":
-            continue
-        cookie = unquote(value)
-        break
-
-    if cookie is None:
-        raise RuntimeError("Can't get Digipad cookie")
-
-    userinfo = get_userinfo(cookie)
+    userinfo = digipad_login(username, password)
     if not userinfo:
         raise ValueError("Not logged in, double-check your username and password")
 
     print(f"Logged in as {userinfo}")
     if print_cookie:
-        print(f"Cookie: {cookie}")
+        print(f"Cookie: {userinfo.cookie}")
         return
 
-    COOKIE_FILE.write_text(cookie, encoding="utf-8")
+    COOKIE_FILE.write_text(userinfo.cookie, encoding="utf-8")
     print(f"Cookie saved to {COOKIE_FILE}")
 
 
@@ -211,6 +191,36 @@ def logout():
     """Handler for digipad logout."""
     COOKIE_FILE.unlink(True)
     print("Logged out")
+
+
+@cli.command()
+@click.option("--open/--no-open", default=True, help="automatically open the browser")
+@click.option(
+    "-s",
+    "--secret-key",
+    default=Path.home() / ".digipad_secret_key",
+    type=click.Path(exists=False, dir_okay=False),
+    help="secret key or path to a file that contains it",
+)
+@click.option("-h", "--host", default="0.0.0.0", help="hostname where the app is run")
+@click.option("-p", "--port", type=int, default=5000, help="port on which the app is run")
+@click.option("--debug/--no-debug", default=False, help="run the app in debugging mode")
+def web(open, secret_key, host, port, debug):
+    """Open the web interface."""
+    if Path(secret_key).exists():
+        secret_key = Path(secret_key).read_text()
+    elif isinstance(secret_key, Path):
+        # default value
+        secret_key_file = secret_key
+        secret_key = random.randbytes(64).hex()
+        Path(secret_key_file).write_text(secret_key)
+
+    if open and not os.getenv("WERKZEUG_RUN_MAIN"):
+        webbrowser.open(f"http://{'127.0.0.1' if host == '0.0.0.0' else host}:{port}")
+
+    from .app import app
+    app.secret_key = secret_key
+    app.run(host, port, debug)
 
 
 def main():
