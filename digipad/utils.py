@@ -1,4 +1,6 @@
 import json
+import os
+import random
 import re
 import typing
 from dataclasses import dataclass
@@ -216,3 +218,19 @@ def get_pads_table(pads: "PadList", verbose=True, all_data=False):
         return [fix_dict(item) for item in data]
 
     return data
+
+
+def get_secret_key(secret_key=""):
+    """Return the secret key that will be used in the web app."""
+    if secret_key and Path(secret_key).exists():
+        # file containing the secret key
+        return Path(secret_key).read_text()
+
+    if isinstance(secret_key, Path):
+        # default value of the --secret-key parameter
+        secret_key_file = secret_key
+        secret_key = random.randbytes(64).hex()
+        Path(secret_key_file).write_text(secret_key)
+        return secret_key
+
+    return secret_key or os.getenv("DIGIPAD_SECRET_KEY", "")

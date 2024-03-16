@@ -1,17 +1,17 @@
 import json
-from dataclasses import dataclass
 import os
-from pathlib import Path
-import random
-from urllib.parse import unquote
 import webbrowser
+from dataclasses import dataclass
+from pathlib import Path
+from urllib.parse import unquote
 
 import click
 from tabulate import tabulate
 
 from .progress import Progress
 from .session import Session
-from .utils import COOKIE_FILE, get_pads_table, get_userinfo, login as digipad_login
+from .utils import COOKIE_FILE, get_pads_table, get_secret_key, get_userinfo
+from .utils import login as digipad_login
 
 __version__ = "2024.2.22"
 
@@ -175,13 +175,7 @@ def logout():
 @click.option("--debug/--no-debug", default=False, help="run the app in debugging mode")
 def web(open, secret_key, host, port, debug):
     """Open the web interface."""
-    if Path(secret_key).exists():
-        secret_key = Path(secret_key).read_text()
-    elif isinstance(secret_key, Path):
-        # default value
-        secret_key_file = secret_key
-        secret_key = random.randbytes(64).hex()
-        Path(secret_key_file).write_text(secret_key)
+    secret_key = get_secret_key(secret_key)
 
     if open and not os.getenv("WERKZEUG_RUN_MAIN"):
         webbrowser.open(f"http://{'127.0.0.1' if host == '0.0.0.0' else host}:{port}")

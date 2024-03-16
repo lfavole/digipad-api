@@ -1,9 +1,14 @@
 {
-    "version": 2,
     "builds": [
-        {"src": "digipad/web.py", "use": "@vercel/python"}
+        {
+            "src": "digipad/web.py",
+            "use": "@vercel/python"
+        }
     ],
-    "rewrites": [
-        {"source": "/(.*)", "destination": "/digipad/web"}
+    "routes": [
+        {
+            "src": "/(.*)",
+            "dest": "digipad/web.py"
+        }
     ]
 }
