@@ -33,14 +33,14 @@ class PadsOnAccount:
         ])
 
     @overload
-    def get(self, pad_id: int | str, default=NOT_PROVIDED) -> Pad:
+    def get(self, pad_id: "int | str", default=NOT_PROVIDED) -> Pad:
         pass
 
     @overload
-    def get(self, pad_id: int | str, default: DefaultT) -> Pad | DefaultT:
+    def get(self, pad_id: "int | str", default: DefaultT) -> "Pad | DefaultT":
         pass
 
-    def get(self, pad_id: int | str, default=NOT_PROVIDED):
+    def get(self, pad_id: "int | str", default=NOT_PROVIDED):
         """
         Return ONE pad with its ID, URL, folder name... (see the documentation for `get_all`).
         You can specify a default value.
@@ -56,7 +56,7 @@ class PadsOnAccount:
             raise KeyError(f"Couldn't find pad {pad_id}")
         return ret[0]
 
-    def get_all(self, pad_ids: list[int] | list[str] | list[int | str]):
+    def get_all(self, pad_ids: "list[int] | list[str] | list[int | str]"):
         """
         Return the pad IDs and hashes corresponding to the given IDs.
         You must give the URL (at least its end with the ID and the hash)

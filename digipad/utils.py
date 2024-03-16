@@ -67,11 +67,11 @@ COOKIE_FILE = Path.home() / ".digipad_cookie"
 
 if typing.TYPE_CHECKING:
     @overload
-    def get_cookie_from_args(args: Options | None, needed: Literal[True]) -> str:
+    def get_cookie_from_args(args: "Options | None", needed: Literal[True]) -> str:
         pass
 
     @overload
-    def get_cookie_from_args(args: Options | None, needed: Literal[False]) -> str | None:
+    def get_cookie_from_args(args: "Options | None", needed: Literal[False]) -> "str | None":
         pass
 
 

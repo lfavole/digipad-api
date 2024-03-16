@@ -82,12 +82,12 @@ class Pad:
     id: int
     hash: str = ""
     title: str = ""
-    code: int | None = None
+    code: "int | None" = None
     access: str = "public"
     columns: list[str] = field(default_factory=list)
     creator: UserInfo = field(default_factory=UserInfo)
-    creation_date: dt.datetime | None = None
-    _connection: PadConnection | None = None
+    creation_date: "dt.datetime | None" = None
+    _connection: "PadConnection | None" = None
 
     def __hash__(self):
         return hash(self.id)
