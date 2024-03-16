@@ -1,18 +1,20 @@
+import json
 import sys
 from html import escape
 from pathlib import Path
 
 from flask import Flask, Response, redirect, request, session, url_for
+from tabulate import tabulate
 
 from ..session import Session
-from ..utils import login as digipad_login
+from ..utils import get_pads_table, login as digipad_login
 
 app = Flask(__name__)
 
 TEMPLATE = (Path(__file__).parent / "template.html").read_text("utf-8")
 
 
-def get_template():
+def get_template(head1="", head2=""):
     userinfo = Session(session).userinfo
     error = session.get("error")
     if error:
@@ -31,6 +33,8 @@ def get_template():
             "%(error)s",
             "" if not error else f'<div class="error">{escape(error)}</div>',
         )
+        .replace("%(head1)s", head1)
+        .replace("%(head2)s", head2)
     )
 
 
@@ -47,7 +51,6 @@ def home():
     return get_template() % {
         "title": "Accueil",
         "body": f"""\
-<h1>Digipad API</h1>
 <ul>
     <li><a href="{url_for("create")}">Création de capsules</a></li>
     <li><a href="{url_for("export")}">Exportation des pads</a></li>
@@ -74,7 +77,7 @@ def login():
         password = request.form.get("password")
         try:
             userinfo = digipad_login(username, password)
-        except Exception as err:
+        except (OSError, RuntimeError) as err:
             session["error"] = f"{type(err).__qualname__}: {err}"
             return redirect("")
         session["digipad_cookie"] = userinfo.cookie
@@ -83,7 +86,6 @@ def login():
     return get_template() % {
         "title": "Connexion",
         "body": """\
-<h1>Connexion</h1>
 <h2>Avec nom d'utilisateur et mot de passe</h2>
 <form method="post">
 <p>
@@ -122,11 +124,32 @@ def logout():
 
 @app.route("/create", methods=["GET", "POST"])
 def create():
-    return get_template() % {
+    if request.method == "POST":
+        pad = Session(session).pads.get(request.form.get("pad", ""))
+        block_id = pad.create_block(
+            title=request.form.get("title", ""),
+            text=request.form.get("text", ""),
+            hidden=bool(request.form.get("hidden")),
+            column_n=int(request.form.get("column_n", 1)) - 1,
+        )
+        comment = request.form.get("comment", "")
+        if comment:
+            pad.comment_block(block_id, request.form.get("title", ""), comment)
+        return "OK"
+
+    return get_template("""\
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pell@1/dist/pell.min.css">
+<script src="https://cdn.jsdelivr.net/npm/pell@1/dist/pell.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/voca@1/index.min.js"></script>
+""", '<script src="/static/editor.js"></script>') % {
         "title": "Création de capsules",
         "body": """\
-<h1>Création de capsules</h1>
-<form method="post">
+<form method="post" action="javascript:;">
+<p>
+    <label for="pads">Pads <small>(un par ligne)</small> :</label>
+    <br>
+    <textarea name="pads" id="pads"></textarea>
+</p>
 <p>
     <label for="title">Titre :</label>
     <input type="text" name="title" id="title">
@@ -134,15 +157,26 @@ def create():
 <p>
     <label for="text">Texte :</label>
     <br>
-    <textarea name="text" id="text"></textarea>
+    <textarea name="text" id="text" class="editor"></textarea>
+</p>
+<p>
+    <label for="column_n">Numéro de colonne :</label>
+    <input type="number" name="column_n" id="column_n" min="1">
+</p>
+<p>
+    <label for="hidden">Bloc caché :</label>
+    <input type="checkbox" name="hidden" id="hidden">
+</p>
+<p>
+    <label for="comment">Commentaire :</label>
+    <br>
+    <textarea name="comment" id="comment" class="editor"></textarea>
 </p>
 <p>
     <input type="submit" value="OK">
 </p>
+<pre class="output"></pre>
 </form>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pell@1/dist/pell.min.css">
-<script src="https://cdn.jsdelivr.net/npm/pell@1/dist/pell.min.js"></script>
-<script src="/static/editor.js"></script>
 """,
     }
 
@@ -154,7 +188,53 @@ def export():
 
 @app.route("/list", methods=["GET", "POST"])
 def list_pads():
-    return get_template()
+    if request.method == "POST":
+        query = request.form.get("pads", "")
+        format = request.form.get("format", "html")
+        pads = Session(session).pads.get_all(query.split("\n"))
+        data = get_pads_table(pads, format != "json", True)
+
+        if format == "json":
+            return Response(
+                json.dumps(data),
+                content_type="application/json",
+            )
+
+        if not pads:
+            return get_template() % {
+                "title": "Liste des pads",
+                "body": "<p>Aucun pad n'a été trouvé avec votre requête :</p><pre>{escape(query)}</pre>",
+            }
+
+        return get_template() % {
+            "title": "Liste des pads",
+            "body": f"""\
+<p>Les pads correspondant à la requête</p>
+<pre>{escape(query)}</pre>
+<p>sont :</p>
+{tabulate(data, tablefmt="html", headers="keys")}
+""",
+        }
+
+    return get_template("""\
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pell@1/dist/pell.min.css">
+<script src="https://cdn.jsdelivr.net/npm/pell@1/dist/pell.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/voca@1/index.min.js"></script>
+""", '<script src="/static/editor.js"></script>') % {
+        "title": "Liste des pads",
+        "body": """\
+<form method="post">
+<p>
+    <label for="pads">Pads <small>(un par ligne)</small> :</label>
+    <br>
+    <textarea name="pads" id="pads"></textarea>
+</p>
+<p>
+    <input type="submit" value="OK">
+</p>
+</form>
+""",
+    }
 
 
 @app.route("/rename-column", methods=["GET", "POST"])

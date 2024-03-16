@@ -20,6 +20,7 @@ classifiers = [
 keywords = ["digipad", "education"]
 dependencies = [
     "click",
+    "flask",
     "python-socketio",
 	"requests",
     "tabulate",

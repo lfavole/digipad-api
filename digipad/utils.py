@@ -10,6 +10,7 @@ import requests
 
 if typing.TYPE_CHECKING:
     from .__init__ import Options
+    from .edit import PadList
 
 
 @dataclass
@@ -174,3 +175,44 @@ def login(username, password):
         raise RuntimeError("Can't get Digipad cookie")
 
     return get_userinfo(cookie)
+
+
+def get_pads_table(pads: "PadList", verbose=True, all_data=False):
+    """Return a `list` of `dict`s containing information about each pad in a pad list."""
+    verbose_names = {
+        "id": "Pad ID",
+        "hash": "Pad hash",
+        "title": "Pad title",
+        "access": "Access",
+        "code": "PIN code",
+        "columns": "Columns",
+    }
+
+    data = []
+    for pad in pads:
+        if all_data:
+            data.append({
+                "id": pad.id,
+                "hash": pad.hash,
+                "title": pad.title,
+                "access": pad.access,
+                "code": pad.code,
+                "columns": pad.columns,
+            })
+        else:
+            data.append({
+                "id": pad.id,
+                "title": pad.title,
+            })
+
+    if verbose:
+        def fix_dict(item: dict):
+            """Replace the keys by the verbose names in the specified `item`."""
+            ret = {}
+            for key, value in item.items():
+                ret[verbose_names.get(key, key)] = value
+            return ret
+
+        return [fix_dict(item) for item in data]
+
+    return data

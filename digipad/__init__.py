@@ -11,7 +11,7 @@ from tabulate import tabulate
 
 from .progress import Progress
 from .session import Session
-from .utils import COOKIE_FILE, get_userinfo, login as digipad_login
+from .utils import COOKIE_FILE, get_pads_table, get_userinfo, login as digipad_login
 
 __version__ = "2024.2.22"
 
@@ -95,32 +95,7 @@ def export(opts, pads, output):
 def list(opts, pads, format, verbose):
     """List pads."""
     pads = Session(opts).pads.get_all(pads)
-
-    verbose_names = {
-        "id": "Pad ID",
-        "hash": "Pad hash",
-        "title": "Pad title",
-        "access": "Access",
-        "code": "PIN code",
-        "columns": "Columns",
-    }
-
-    data = []
-    for pad in pads:
-        if verbose:
-            data.append({
-                "id": pad.id,
-                "hash": pad.hash,
-                "title": pad.title,
-                "access": pad.access,
-                "code": pad.code,
-                "columns": pad.columns,
-            })
-        else:
-            data.append({
-                "id": pad.id,
-                "title": pad.title,
-            })
+    data = get_pads_table(pads, verbose, format == "json")
 
     if format == "json":
         print(json.dumps(data))
@@ -129,14 +104,7 @@ def list(opts, pads, format, verbose):
             print("No pad")
             return
 
-        def fix_dict(item: dict):
-            """Replace the keys by the verbose names in the specified `item`."""
-            ret = {}
-            for key, value in item.items():
-                ret[verbose_names.get(key, key)] = value
-            return ret
-
-        print(tabulate([fix_dict(item) for item in data], headers="keys"))
+        print(tabulate(data, headers="keys"))
         print()
         print(f"{len(pads)} {'pads' if len(pads) >= 2 else 'pad'}")
 

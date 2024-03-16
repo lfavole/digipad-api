@@ -32,7 +32,6 @@ class PadConnection:
         """
         return self.session.userinfo  # type: ignore
 
-    @functools.lru_cache
     def connect(self):
         """
         Connect to the pad.
@@ -46,7 +45,6 @@ class PadConnection:
         socket = socketio.SimpleClient()
         socket.connect(
             "https://digipad.app",
-            transports=["polling"],
             headers={"Cookie": "digipad=" + quote(self.session.cookie)},
         )
 
@@ -152,7 +150,7 @@ class Pad:
             block_id = f"bloc-id-{int(time.time() * 1000)}{random.randbytes(3).hex()[1:]}"
             command = "ajouterbloc"
 
-        block_id = self.connection.run(
+        ret = self.connection.run(
             command,
             block_id,
             str(self.id),
@@ -170,7 +168,7 @@ class Pad:
             self.connection.userinfo.username,
             self.connection.userinfo.name,
         )
-        return block_id
+        return ret["bloc"]
 
     def create_block(self, title, text, hidden=False, column_n=0):
         """

@@ -71,7 +71,7 @@ class Session:
                     id=pad["id"],
                     hash=pad["token"],
                     title=pad["titre"],
-                    code=pad["code"],
+                    code=pad.get("code"),
                     access=pad["acces"],
                     columns=json.loads(pad["colonnes"]),
                     creator=UserInfo.from_json(pad),

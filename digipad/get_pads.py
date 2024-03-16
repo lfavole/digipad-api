@@ -1,8 +1,10 @@
 from dataclasses import dataclass, field
+from typing import TypeVar, overload
 
-from .edit import PadList
+from .edit import Pad, PadList
 
 NOT_PROVIDED = object()
+DefaultT = TypeVar("DefaultT")
 
 
 @dataclass
@@ -30,6 +32,14 @@ class PadsOnAccount:
             *self.favourite,
         ])
 
+    @overload
+    def get(self, pad_id: int | str, default=NOT_PROVIDED) -> Pad:
+        pass
+
+    @overload
+    def get(self, pad_id: int | str, default: DefaultT) -> Pad | DefaultT:
+        pass
+
     def get(self, pad_id: int | str, default=NOT_PROVIDED):
         """
         Return ONE pad with its ID, URL, folder name... (see the documentation for `get_all`).
@@ -46,7 +56,7 @@ class PadsOnAccount:
             raise KeyError(f"Couldn't find pad {pad_id}")
         return ret[0]
 
-    def get_all(self, pad_ids: list[int | str]):
+    def get_all(self, pad_ids: list[int] | list[str] | list[int | str]):
         """
         Return the pad IDs and hashes corresponding to the given IDs.
         You must give the URL (at least its end with the ID and the hash)
