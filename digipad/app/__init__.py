@@ -7,11 +7,19 @@ from flask import Flask, Response, redirect, request, session, url_for
 from tabulate import tabulate
 
 from ..session import Session
-from ..utils import get_pads_table, login as digipad_login
+from ..utils import get_pads_table
+from ..utils import login as digipad_login
 
 app = Flask(__name__)
 
 TEMPLATE = (Path(__file__).parent / "template.html").read_text("utf-8")
+
+
+class JSONResponse(Response):
+    def __init__(self, response, *args, **kwargs):
+        if not isinstance(response, str):
+            response = json.dumps(response)
+        super().__init__(response, *args, content_type="application/json", **kwargs)
 
 
 def get_template(head1="", head2=""):
@@ -46,6 +54,14 @@ def editor():
     )
 
 
+@app.errorhandler(Exception)
+def error_handler(err):
+    if request.form.get("format", "html") == "json":
+        return JSONResponse({"ok": False, "error": f"{type(err).__qualname__}: {err}"})
+    session["error"] = f"{type(err).__qualname__}: {err}"
+    return redirect("/")
+
+
 @app.route("/")
 def home():
     return get_template() % {
@@ -75,11 +91,7 @@ def login():
 
         username = request.form.get("username")
         password = request.form.get("password")
-        try:
-            userinfo = digipad_login(username, password)
-        except (OSError, RuntimeError) as err:
-            session["error"] = f"{type(err).__qualname__}: {err}"
-            return redirect("")
+        userinfo = digipad_login(username, password)
         session["digipad_cookie"] = userinfo.cookie
         return redirect(url_for("home"))
 
@@ -132,10 +144,12 @@ def create():
             hidden=bool(request.form.get("hidden")),
             column_n=int(request.form.get("column_n", 1)) - 1,
         )
+        message = f"Creating block on #{pad.id}... OK\n"
         comment = request.form.get("comment", "")
         if comment:
+            message += "Commenting... OK\n"
             pad.comment_block(block_id, request.form.get("title", ""), comment)
-        return "OK"
+        return JSONResponse({"ok": True, "message": message})
 
     return get_template("""\
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pell@1/dist/pell.min.css">
@@ -175,7 +189,7 @@ def create():
 <p>
     <input type="submit" value="OK">
 </p>
-<pre class="output"></pre>
+<pre class="output" data-operation="Creating block"></pre>
 </form>
 """,
     }

@@ -33,6 +33,9 @@ self.addEventListener("fetch", async evt => {
 	}
 	async function getResponse(evt) {
 		var request = evt.request;
+		if(response.url.startsWith(location.origin + "/"))
+			return await fetchAndCache(request);
+
 		var cachedResponse = await getFromCache(request);
 		if(cachedResponse) {
 			fetchAndCache(request).catch(console.error);

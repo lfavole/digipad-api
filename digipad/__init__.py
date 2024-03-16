@@ -61,7 +61,7 @@ def create_block(opts, pads, title, text, column_n, hidden, comment):
 @cli.command()
 @pad_argument
 @click.option("--title", required=True, help="title of the column")
-@click.option("--column-n", required=True, help="column number (starting from 0)")
+@click.option("--column-n", type=int, required=True, help="column number (starting from 0)")
 @pass_opts
 def rename_column(opts, pads, title, column_n):
     """Rename a column in a pad."""

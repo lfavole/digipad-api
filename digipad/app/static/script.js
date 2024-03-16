@@ -14,9 +14,19 @@ window.addEventListener("DOMContentLoaded", () => {
         if(!output) return;
         form.addEventListener("submit", async evt => {
             evt.preventDefault();
+
+            var text = "";
+            var currentLine = "";
+
+            var updateText = () => {output.textContent = text + currentLine};
+            var nextLine = () => {text += currentLine; currentLine = ""};
+
             var formdata = new FormData();
             formdata.append("pads", form.pads.value);
             formdata.append("format", "json");
+
+            currentLine = "Fetching pads list... ";
+            updateText();
             var req = await fetch(
                 "/list",
                 {
@@ -24,17 +34,21 @@ window.addEventListener("DOMContentLoaded", () => {
                     body: formdata
                 },
             );
-            var data = await req.json();
+            var pads = await req.json();
+            currentLine += `${pads.length} pad${pads.length >= 2 ? "s" : ""} found\n`;
+            updateText();
 
-            output.textContent = "";
-            output.textContent += `${data.length} pad${data.length >= 2 ? "s" : ""} found\n`;
+            for(var i = 0, l = pads.length; i < l; i++) {
+                nextLine();
 
-            for(var i = 0, l = data.length; i < l; i++) {
-                var pad = data[i];
+                var pad = pads[i];
                 var formdata = new FormData(form);
                 formdata.delete("pads");
                 formdata.append("pad", pad.id + "/" + pad.hash);
-                output.textContent += `Creating block on ${pad.id}... `;
+                formdata.append("format", "json");
+
+                currentLine = `${output.dataset.operation} on ${pad.id}... `;
+                updateText();
                 var req = await fetch(
                     "/create",
                     {
@@ -42,7 +56,10 @@ window.addEventListener("DOMContentLoaded", () => {
                         body: formdata
                     },
                 );
-                output.textContent += (req.ok ? "OK" : "error") + "\n";
+                var data = await req.json();
+
+                currentLine = data.ok ? data.message : `${currentLine}Error: ${data.error}\n`;
+                updateText();
             }
         });
     });
