@@ -254,7 +254,44 @@ def list_pads():
 
 @app.route("/rename-column", methods=["GET", "POST"])
 def rename_column():
-    return get_template()
+    if request.method == "POST":
+        pad = Session(session).pads.get(request.form.get("pad", ""))
+        pad.rename_column(
+            column_number=int(request.form.get("column_n", 1)) - 1,
+            column_title=request.form.get("title", ""),
+        )
+        message = f"Renaming column on #{pad.id}... OK\n"
+        pad.connection.close()
+        return JSONResponse({"ok": True, "message": message})
+
+    return get_template("""\
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pell@1/dist/pell.min.css">
+<script src="https://cdn.jsdelivr.net/npm/pell@1/dist/pell.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/voca@1/index.min.js"></script>
+""", '<script src="/static/editor.js"></script>') % {
+        "title": "Renommage des colonnes",
+        "body": """\
+<form method="post" action="javascript:;">
+<p>
+    <label for="pads">Pads <small>(un par ligne)</small> :</label>
+    <br>
+    <textarea name="pads" id="pads"></textarea>
+</p>
+<p>
+    <label for="column_n">Numéro de colonne :</label>
+    <input type="number" name="column_n" id="column_n" min="1">
+</p>
+<p>
+    <label for="title">Nouveau titre :</label>
+    <input type="text" name="title" id="title">
+</p>
+<p>
+    <input type="submit" value="OK">
+</p>
+<pre class="output" data-operation="Renaming column"></pre>
+</form>
+""",
+    }
 
 
 if __name__ == "__main__":
