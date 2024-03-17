@@ -151,7 +151,7 @@ def userinfo(opts, cookie):
 
 
 @cli.command(help="Save the Digipad cookie for later use")
-@click.argument("COOKIE")
+@click.option("--cookie", prompt="Digipad cookie", hide_input=True)
 def set_cookie(cookie):
     """Save the Digipad cookie for later use."""
     cookie = unquote(cookie)
