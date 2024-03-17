@@ -1,5 +1,6 @@
 import json
 import os
+import time
 import webbrowser
 from dataclasses import dataclass
 from pathlib import Path
@@ -26,6 +27,7 @@ class Options:
 pass_opts = click.make_pass_decorator(Options)
 
 pad_argument = click.argument("PADS", nargs=-1, required=True)
+delay_option = click.option("--delay", type=int, default=1)
 
 
 @click.group()
@@ -40,13 +42,14 @@ def cli(ctx, delay, cookie):
 
 @cli.command()
 @pad_argument
+@delay_option
 @click.option("--title", default="", help="title of the block")
 @click.option("--text", default="", help="text of the block", required=True)
 @click.option("--column-n", default=0, help="column number (starting from 0)")
 @click.option("--hidden", is_flag=True, help="if specified, hide the block")
 @click.option("--comment", help="comment to add to the block")
 @pass_opts
-def create_block(opts, pads, title, text, column_n, hidden, comment):
+def create_block(opts, pads, delay, title, text, column_n, hidden, comment):
     """Create a block in a pad."""
     pads = Session(opts).pads.get_all(pads)
     for pad in pads:
@@ -54,28 +57,35 @@ def create_block(opts, pads, title, text, column_n, hidden, comment):
             block_id = pad.create_block(title, text, hidden, column_n)
             prog.end()
             if comment:
+                time.sleep(delay)
                 prog.start("Commenting")
                 pad.comment_block(block_id, title, comment)
+            pad.connection.close()
+            time.sleep(delay)
 
 
 @cli.command()
 @pad_argument
+@delay_option
 @click.option("--title", required=True, help="title of the column")
 @click.option("--column-n", type=int, required=True, help="column number (starting from 0)")
 @pass_opts
-def rename_column(opts, pads, title, column_n):
+def rename_column(opts, pads, delay, title, column_n):
     """Rename a column in a pad."""
     pads = Session(opts).pads.get_all(pads)
     for pad in pads:
         with Progress(f"Renaming column on {pad}"):
             pad.rename_column(column_n, title)
+        pad.connection.close()
+        time.sleep(delay)
 
 
 @cli.command()
 @pad_argument
+@delay_option
 @click.option("-o", "--output", help="output directory")
 @pass_opts
-def export(opts, pads, output):
+def export(opts, pads, delay, output):
     """Export pads."""
     pads = Session(opts).pads.get_all(pads)
     if not pads:
@@ -85,6 +95,7 @@ def export(opts, pads, output):
     for pad in pads:
         with Progress(f"Exporting pad {pad}"):
             pad.export(output)
+        time.sleep(delay)
 
 
 @cli.command()

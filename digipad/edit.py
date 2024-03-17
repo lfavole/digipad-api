@@ -61,6 +61,11 @@ class PadConnection:
         self.socket = socket
         return socket
 
+    def close(self):
+        if self.socket:
+            self.socket.disconnect()
+            self.socket = None
+
     def run(self, command, *args):
         """
         Run a command on the pad.

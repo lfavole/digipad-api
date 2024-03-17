@@ -149,6 +149,7 @@ def create():
         if comment:
             message += "Commenting... OK\n"
             pad.comment_block(block_id, request.form.get("title", ""), comment)
+        pad.connection.close()
         return JSONResponse({"ok": True, "message": message})
 
     return get_template("""\
