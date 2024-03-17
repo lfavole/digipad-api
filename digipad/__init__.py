@@ -1,105 +1,193 @@
-import argparse
+import json
+import os
+import webbrowser
+from dataclasses import dataclass
+from pathlib import Path
 from urllib.parse import unquote
 
-from .edit import comment_block, create_block, rename_column
-from .export import export_pad
-from .get_pads import get_all_pads, get_userinfo
-from .utils import COOKIE_FILE, get_cookie
+import click
+from tabulate import tabulate
+
+from .progress import Progress
+from .session import Session
+from .utils import COOKIE_FILE, get_pads_table, get_secret_key, get_userinfo
+from .utils import login as digipad_login
 
 __version__ = "2024.2.22"
 
 
-def create_block_cmd(args):
-    cookie = get_cookie(args, False)
-    all_pads = get_all_pads(cookie)
-    pads = all_pads.get_pads(args.LIST)
-    for pad_id in pads:
-        print(f"Creating block on {pad_id}{' (' + all_pads.all[pad_id] + ')' if pad_id in all_pads.all else ''}...")
-        pad_hash = all_pads.pad_hashes[pad_id]
-        block_id = create_block(pad_id, pad_hash, args.title, args.text, column_n=args.column_n, digipad_cookie=cookie)
-        if args.comment:
-            comment_block(pad_id, pad_hash, block_id, args.title, args.comment, digipad_cookie=cookie)
+@dataclass
+class Options:
+    """Global command line options."""
+    delay: int
+    cookie: str
 
 
-def rename_column_cmd(args):
-    cookie = get_cookie(args, False)
-    all_pads = get_all_pads(cookie)
-    pads = all_pads.get_pads(args.LIST)
-    for pad_id in pads:
-        print(f"Renaming column on {pad_id}{' (' + all_pads.all[pad_id] + ')' if pad_id in all_pads.all else ''}...")
-        pad_hash = all_pads.pad_hashes[pad_id]
-        rename_column(pad_id, pad_hash, args.column_n, args.title, digipad_cookie=cookie)
+pass_opts = click.make_pass_decorator(Options)
+
+pad_argument = click.argument("PADS", nargs=-1, required=True)
 
 
-def export_pads_cmd(args):
-    cookie = get_cookie(args)
-    pads = get_all_pads(cookie).get_pads(args.LIST)
+@click.group()
+@click.version_option(__version__)
+@click.option("--delay", type=int, default=0, help="delay between operations")
+@click.option("--cookie", help="Digipad cookie")
+@click.pass_context
+def cli(ctx, delay, cookie):
+    """Main command that handles the default parameters."""
+    ctx.obj = Options(delay, cookie)
+
+
+@cli.command()
+@pad_argument
+@click.option("--title", default="", help="title of the block")
+@click.option("--text", default="", help="text of the block", required=True)
+@click.option("--column-n", default=0, help="column number (starting from 0)")
+@click.option("--hidden", is_flag=True, help="if specified, hide the block")
+@click.option("--comment", help="comment to add to the block")
+@pass_opts
+def create_block(opts, pads, title, text, column_n, hidden, comment):
+    """Create a block in a pad."""
+    pads = Session(opts).pads.get_all(pads)
+    for pad in pads:
+        with Progress(f"Creating block on {pad}") as prog:
+            block_id = pad.create_block(title, text, hidden, column_n)
+            prog.end()
+            if comment:
+                prog.start("Commenting")
+                pad.comment_block(block_id, title, comment)
+
+
+@cli.command()
+@pad_argument
+@click.option("--title", required=True, help="title of the column")
+@click.option("--column-n", type=int, required=True, help="column number (starting from 0)")
+@pass_opts
+def rename_column(opts, pads, title, column_n):
+    """Rename a column in a pad."""
+    pads = Session(opts).pads.get_all(pads)
+    for pad in pads:
+        with Progress(f"Renaming column on {pad}"):
+            pad.rename_column(column_n, title)
+
+
+@cli.command()
+@pad_argument
+@click.option("-o", "--output", help="output directory")
+@pass_opts
+def export(opts, pads, output):
+    """Export pads."""
+    pads = Session(opts).pads.get_all(pads)
     if not pads:
         print("No pad to export")
         return
 
-    for pad_id, pad_title in pads.items():
-        export_pad(pad_id, cookie, args.output)
-        print(f"Exported pad #{pad_id} ({pad_title})")
+    for pad in pads:
+        with Progress(f"Exporting pad {pad}"):
+            pad.export(output)
 
 
-def list_pads_cmd(args):
-    cookie = get_cookie(args)
-    pads = get_all_pads(cookie).get_pads(args.LIST)
-    if not pads:
-        print("No pad")
+@cli.command()
+@pad_argument
+@click.option("-f", "--format", type=click.Choice(["table", "json"]), default="table", help="output format")
+@click.option("-v", "--verbose", is_flag=True, help="print more information about pads")
+@pass_opts
+def list(opts, pads, format, verbose):
+    """List pads."""
+    pads = Session(opts).pads.get_all(pads)
+    data = get_pads_table(pads, verbose, format == "json")
+
+    if format == "json":
+        print(json.dumps(data))
+    else:
+        if not pads:
+            print("No pad")
+            return
+
+        print(tabulate(data, headers="keys"))
+        print()
+        print(f"{len(pads)} {'pads' if len(pads) >= 2 else 'pad'}")
+
+
+@cli.command()
+@click.option("--username", prompt="Username")
+@click.option("--password", prompt="Password", hide_input=True)
+@click.option("--print-cookie", is_flag=True, help="print the cookie and don't save it")
+def login(username, password, print_cookie):
+    """Log into Digipad and save the cookie."""
+    userinfo = digipad_login(username, password)
+    if not userinfo:
+        raise ValueError("Not logged in, double-check your username and password")
+
+    print(f"Logged in as {userinfo}")
+    if print_cookie:
+        print(f"Cookie: {userinfo.cookie}")
         return
 
-    print("Pad ID|Pad name")
-    print("===============")
-    for pad_id, pad_name in pads.items():
-        print(pad_id, pad_name)
-    print()
-    print(f"{len(pads)} {'pads' if len(pads) >= 2 else 'pad'}")
+    COOKIE_FILE.write_text(userinfo.cookie, encoding="utf-8")
+    print(f"Cookie saved to {COOKIE_FILE}")
 
 
-def set_cookie_cmd(args):
-    cookie = unquote(args.COOKIE)
-    if not get_userinfo(cookie).username:
+@cli.command()
+@click.argument("COOKIE", required=False)
+@pass_opts
+def userinfo(opts, cookie):
+    """Print information about the current logged-in user or a specified cookie."""
+    userinfo = Session(cookie or opts).userinfo
+    print(f"Logged in as {userinfo}")
+    if not userinfo:
+        print("Anonymous session")
+
+
+@cli.command(help="Save the Digipad cookie for later use")
+@click.argument("COOKIE")
+def set_cookie(cookie):
+    """Save the Digipad cookie for later use."""
+    cookie = unquote(cookie)
+
+    userinfo = get_userinfo(cookie)
+    if not userinfo:
         raise ValueError("Not logged in")
+
+    print(f"Logged in as {userinfo}")
     COOKIE_FILE.write_text(cookie, encoding="utf-8")
     print(f"Cookie saved to {COOKIE_FILE}")
 
 
+@cli.command(help="Delete the Digipad cookie file and log out")
+def logout():
+    """Handler for digipad logout."""
+    COOKIE_FILE.unlink(True)
+    print("Logged out")
+
+
+@cli.command()
+@click.option("--open/--no-open", default=True, help="automatically open the browser")
+@click.option(
+    "-s",
+    "--secret-key",
+    default=Path.home() / ".digipad_secret_key",
+    type=click.Path(exists=False, dir_okay=False),
+    help="secret key or path to a file that contains it",
+)
+@click.option("-h", "--host", default="0.0.0.0", help="hostname where the app is run")
+@click.option("-p", "--port", type=int, default=5000, help="port on which the app is run")
+@click.option("--debug/--no-debug", default=False, help="run the app in debugging mode")
+def web(open, secret_key, host, port, debug):
+    """Open the web interface."""
+    secret_key = get_secret_key(secret_key)
+
+    if open and not os.getenv("WERKZEUG_RUN_MAIN"):
+        webbrowser.open(f"http://{'127.0.0.1' if host == '0.0.0.0' else host}:{port}")
+
+    from .app import app
+    app.secret_key = secret_key
+    app.run(host, port, debug)
+
+
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--cookie", help="Digipad cookie")
-    subparsers = parser.add_subparsers(required=True)
+    cli.main()
 
-    parser_create_block = subparsers.add_parser("create-block", help="Create a block in a pad")
-    parser_create_block.add_argument("LIST", nargs="*", default=("created",), help="pads to edit")
-    parser_create_block.add_argument("--title", default="", help="title of the block")
-    parser_create_block.add_argument("--text", default="", help="text of the block", required=True)
-    parser_create_block.add_argument("--column-n", default=0, help="column number (starting from 0)")
-    parser_create_block.add_argument("--comment", help="comment to add to the block")
-    parser_create_block.set_defaults(func=create_block_cmd)
-
-    parser_create_block = subparsers.add_parser("rename-column", help="Rename a column in a pad")
-    parser_create_block.add_argument("LIST", nargs="*", default=("created",), help="pads to edit")
-    parser_create_block.add_argument("--title", default="", help="title of the column")
-    parser_create_block.add_argument("--column-n", help="column number (starting from 0)")
-    parser_create_block.set_defaults(func=rename_column_cmd)
-
-    parser_export = subparsers.add_parser("export", help="Export pads")
-    parser_export.add_argument("LIST", nargs="*", default=("created",), help="pad list to export")
-    parser_export.add_argument("-o", "--output", help="output directory")
-    parser_export.set_defaults(func=export_pads_cmd)
-
-    parser_list = subparsers.add_parser("list", help="List pads")
-    parser_list.add_argument("LIST", nargs="*", default=("created",), help="pad list to export")
-    parser_list.set_defaults(func=list_pads_cmd)
-
-    parser_export = subparsers.add_parser("set-cookie", help="Save the Digipad cookie for later use")
-    parser_export.add_argument("COOKIE", help="Digipad cookie")
-    parser_export.set_defaults(func=set_cookie_cmd)
-
-    args = parser.parse_args()
-    args.func(args)
 
 if __name__ == "__main__":
     main()

@@ -1,0 +1,84 @@
+* {
+    box-sizing: border-box;
+}
+body {
+    font-family: Roboto, sans-serif;
+}
+aside {
+    float: right;
+}
+textarea {
+    padding: 0.5em;
+    width: 100%;
+    min-height: 10em;
+    max-height: 20em;
+    resize: vertical;
+}
+#editor {
+    border: 1px solid #999;
+    width: 100%;
+    height: 100%;
+    outline: 0;
+    border-radius: 0.5em;
+    margin-bottom: 20px;
+}
+.pell-actionbar {
+    background: white;
+    padding: 0.25em 0.5em;
+    border-bottom: 1px solid #999;
+    line-height: 1;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    border-radius: 0.5em 0.5em 0 0;
+}
+.pell-button {
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.75em;
+    text-align: center;
+    color: #222;
+    margin-right: 0.5em;
+    width: 1.5em;
+    height: 1.5em;
+}
+.pell-button .list-icon {
+    font-size: 0.37em;
+    line-height: 0.9em;
+    width: 3em;
+    font-weight: bold;
+}
+.pell-button .link-icon {
+    font-size: 0.8em;
+}
+.pell-button input[type="color"] {
+    padding: 0;
+    border: 0;
+    margin-left: 0.3em;
+    width: 1.5em;
+    height: 1.5em;
+    border-radius: 50%;
+    cursor: pointer;
+}
+.pell-content {
+    padding: 0.7em 1em;
+    height: unset;
+    min-height: 6em;
+    max-height: 15em;
+    outline: none !important;
+    user-select: text !important;
+}
+.pell-content:empty::before {
+    content: "Écrivez votre texte ici...";
+    color: #aaa;
+    cursor: text;
+}
+table {
+    border-collapse: collapse;
+}
+td, th {
+    border: 1px solid black;
+    padding: 0.125em 0.25em;
+}
