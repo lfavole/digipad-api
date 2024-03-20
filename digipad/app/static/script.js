@@ -12,8 +12,12 @@ window.addEventListener("DOMContentLoaded", () => {
     document.querySelectorAll("form").forEach(form => {
         var output = form.querySelector(".output");
         if(!output) return;
+        var operation = output.dataset.operation;
+        var exporting = operation == "Exporting pads";
         form.addEventListener("submit", async evt => {
             evt.preventDefault();
+
+            var filenames = [];
 
             var text = "";
             var currentLine = "";
@@ -47,7 +51,7 @@ window.addEventListener("DOMContentLoaded", () => {
                 formdata.append("pad", pad.id + "/" + pad.hash);
                 formdata.append("format", "json");
 
-                currentLine = `${output.dataset.operation} on ${pad.id}... `;
+                currentLine = `${operation} on ${pad.id}... `;
                 updateText();
                 var req = await fetch(
                     "/create",
@@ -59,6 +63,33 @@ window.addEventListener("DOMContentLoaded", () => {
                 var data = await req.json();
 
                 currentLine = data.ok ? data.message : `${currentLine}Error: ${data.error}\n`;
+                updateText();
+
+                if(exporting) {
+                    var match = /\((\/static\/.*?)\)/.exec(data.message);
+                    if(match) filenames.push(match[1]);
+                }
+            }
+
+            if(exporting) {
+                nextLine();
+
+                currentLine = `Zipping ${filenames.length} pad${filenames.length >= 2 ? "s" : ""}... `;
+                updateText();
+
+                var formdata = new FormData();
+                formdata.append("files", filenames.join("\n"));
+                formdata.append("format", "json");
+                var req = await fetch(
+                    "/zip",
+                    {
+                        method: "POST",
+                        body: formdata
+                    },
+                );
+                var data = await req.text();
+
+                currentLine += `Zip is available at ${data}\n`;
                 updateText();
             }
         });

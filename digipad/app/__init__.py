@@ -1,7 +1,11 @@
+import datetime as dt
 import json
+import random
 import sys
 from html import escape
 from pathlib import Path
+from urllib.parse import urlparse
+import zipfile
 
 from flask import Flask, Response, redirect, request, session, url_for
 from tabulate import tabulate
@@ -12,6 +16,8 @@ from ..utils import login as digipad_login
 
 app = Flask(__name__)
 
+EXPORT_DIRECTORY = Path(__file__).parent / "static/export"
+EXPORT_DIRECTORY.mkdir(parents=True, exist_ok=True)
 TEMPLATE = (Path(__file__).parent / "template.html").read_text("utf-8")
 
 
@@ -196,9 +202,57 @@ def create():
     }
 
 
+@app.route("/zip", methods=["POST"])
+def zip():
+    files = request.form.get("files", "").split("\n")
+    paths: list[Path] = []
+    for file in files:
+        path = Path(urlparse(file).path).resolve()
+        if not path.is_relative_to(EXPORT_DIRECTORY):
+            continue
+        paths.append(path)
+
+    export_directory = EXPORT_DIRECTORY / random.randbytes(8).hex()
+    export_directory.mkdir(parents=True, exist_ok=True)
+
+    path = export_directory / f"pads_{dt.datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
+    with zipfile.ZipFile(path, "w") as zip:
+        for path in paths:
+            zip.write(path, path.name)
+    return "/" + path.relative_to(Path(__file__).resolve()).as_posix()
+
+
 @app.route("/export", methods=["GET", "POST"])
 def export():
-    return get_template()
+    if request.method == "POST":
+        pad = Session(session).pads.get(request.form.get("pad", ""))
+        export_directory = EXPORT_DIRECTORY / random.randbytes(8).hex()
+        export_directory.mkdir(parents=True, exist_ok=True)
+        path = pad.export(export_directory)
+        url = "/" + path.relative_to(Path(__file__).resolve()).as_posix()
+        message = f"Exporting #{pad.id}... OK ({url})\n"
+        return JSONResponse({"ok": True, "message": message})
+
+    return get_template("""\
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pell@1/dist/pell.min.css">
+<script src="https://cdn.jsdelivr.net/npm/pell@1/dist/pell.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/voca@1/index.min.js"></script>
+""", '<script src="/static/editor.js"></script>') % {
+        "title": "Exportation des pads",
+        "body": """\
+<form method="post" action="javascript:;">
+<p>
+    <label for="pads">Pads <small>(un par ligne)</small> :</label>
+    <br>
+    <textarea name="pads" id="pads"></textarea>
+</p>
+<p>
+    <input type="submit" value="OK">
+</p>
+<pre class="output" data-operation="Renaming column"></pre>
+</form>
+""",
+    }
 
 
 @app.route("/list", methods=["GET", "POST"])
