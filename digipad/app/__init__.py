@@ -17,7 +17,6 @@ from ..utils import login as digipad_login
 app = Flask(__name__)
 
 EXPORT_DIRECTORY = Path(__file__).parent / "static/export"
-EXPORT_DIRECTORY.mkdir(parents=True, exist_ok=True)
 TEMPLATE = (Path(__file__).parent / "template.html").read_text("utf-8")
 
 
