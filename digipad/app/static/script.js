@@ -54,7 +54,7 @@ window.addEventListener("DOMContentLoaded", () => {
                 currentLine = `${operation} on ${pad.id}... `;
                 updateText();
                 var req = await fetch(
-                    "/create",
+                    location.href,
                     {
                         method: "POST",
                         body: formdata
