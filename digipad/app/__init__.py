@@ -51,14 +51,6 @@ def get_template(head1="", head2=""):
     )
 
 
-@app.route("/sw.js")
-def editor():
-    return Response(
-        (Path(__file__).parent / "static/sw.js").read_text("utf-8"),
-        content_type="text/javascript",
-    )
-
-
 @app.errorhandler(Exception)
 def error_handler(err):
     if request.form.get("format", "html") == "json":
