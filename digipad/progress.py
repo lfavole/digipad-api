@@ -24,6 +24,10 @@ class Progress:
         self.start(self.message)
         return self
 
-    def __exit__(self, *args, **kwargs):
-        self.end()
-        print()
+    def __exit__(self, exc, value, tb):
+        if exc:
+            self.end()
+            print()
+        else:
+            self.ended = True
+            print("ERROR: ", end="")
