@@ -20,6 +20,7 @@ class UserInfo:
     """
     Information about a Digipad user.
     """
+
     username: str = ""
     name: str = ""
     email: str = ""
@@ -68,6 +69,7 @@ COOKIE_FILE = Path.home() / ".digipad_cookie"
 
 
 if typing.TYPE_CHECKING:
+
     @overload
     def get_cookie_from_args(args: "Options | None", needed: Literal[True]) -> str:
         pass
@@ -82,6 +84,7 @@ def get_cookie_from_args(args, needed=True):
     Returns a Digipad cookie, checking first in the arguments. If `needed`, raise an exception.
     """
     from .__init__ import Options
+
     if args and isinstance(args, Options) and args.cookie:
         return unquote(args.cookie)
 
@@ -193,21 +196,26 @@ def get_pads_table(pads: "PadList", verbose=True, all_data=False):
     data = []
     for pad in pads:
         if all_data:
-            data.append({
-                "id": pad.id,
-                "hash": pad.hash,
-                "title": pad.title,
-                "access": pad.access,
-                "code": pad.code,
-                "columns": pad.columns,
-            })
+            data.append(
+                {
+                    "id": pad.id,
+                    "hash": pad.hash,
+                    "title": pad.title,
+                    "access": pad.access,
+                    "code": pad.code,
+                    "columns": pad.columns,
+                }
+            )
         else:
-            data.append({
-                "id": pad.id,
-                "title": pad.title,
-            })
+            data.append(
+                {
+                    "id": pad.id,
+                    "title": pad.title,
+                }
+            )
 
     if verbose:
+
         def fix_dict(item: dict):
             """Replace the keys by the verbose names in the specified `item`."""
             ret = {}

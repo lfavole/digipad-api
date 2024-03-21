@@ -58,7 +58,6 @@ line-length = 120
 [tool.isort]
 profile = "black"
 line_length = 120
-skip = "migrations"
 
 [tool.pylint.main]
 jobs = 0
@@ -81,4 +80,4 @@ include-naming-hint = "y"
 [tool.pylint.basic]
 allowed-redefined-builtins = "id"
 good-names = ["f", "i", "id"]
-no-docstring-rgx = "^main$"
+no-docstring-rgx = "^main|__.*__$"

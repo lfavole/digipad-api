@@ -20,6 +20,7 @@ __version__ = "2024.2.22"
 @dataclass
 class Options:
     """Global command line options."""
+
     delay: int
     cookie: str
 
@@ -103,7 +104,7 @@ def export(opts, pads, delay, output):
 @click.option("-f", "--format", type=click.Choice(["table", "json"]), default="table", help="output format")
 @click.option("-v", "--verbose", is_flag=True, help="print more information about pads")
 @pass_opts
-def list(opts, pads, format, verbose):
+def list(opts, pads, format, verbose):  # pylint: disable=W0622
     """List pads."""
     pads = Session(opts).pads.get_all(pads)
     data = get_pads_table(pads, verbose, format == "json")
@@ -126,7 +127,7 @@ def list(opts, pads, format, verbose):
 @click.option("--print-cookie", is_flag=True, help="print the cookie and don't save it")
 def login(username, password, print_cookie):
     """Log into Digipad and save the cookie."""
-    userinfo = digipad_login(username, password)
+    userinfo = digipad_login(username, password)  # pylint: disable=W0621
     if not userinfo:
         raise ValueError("Not logged in, double-check your username and password")
 
@@ -144,7 +145,7 @@ def login(username, password, print_cookie):
 @pass_opts
 def userinfo(opts, cookie):
     """Print information about the current logged-in user or a specified cookie."""
-    userinfo = Session(cookie or opts).userinfo
+    userinfo = Session(cookie or opts).userinfo  # pylint: disable=W0621
     print(f"Logged in as {userinfo}")
     if not userinfo:
         print("Anonymous session")
@@ -156,7 +157,7 @@ def set_cookie(cookie):
     """Save the Digipad cookie for later use."""
     cookie = unquote(cookie)
 
-    userinfo = get_userinfo(cookie)
+    userinfo = get_userinfo(cookie)  # pylint: disable=W0621
     if not userinfo:
         raise ValueError("Not logged in")
 
@@ -184,7 +185,7 @@ def logout():
 @click.option("-h", "--host", default="0.0.0.0", help="hostname where the app is run")
 @click.option("-p", "--port", type=int, default=5000, help="port on which the app is run")
 @click.option("--debug/--no-debug", default=False, help="run the app in debugging mode")
-def web(open, secret_key, host, port, debug):
+def web(open, secret_key, host, port, debug):  # pylint: disable=W0622
     """Open the web interface."""
     secret_key = get_secret_key(secret_key)
 
@@ -192,6 +193,7 @@ def web(open, secret_key, host, port, debug):
         webbrowser.open(f"http://{'127.0.0.1' if host == '0.0.0.0' else host}:{port}")
 
     from .app import app
+
     app.secret_key = secret_key
     app.run(host, port, debug)
 

@@ -12,8 +12,10 @@ class Session:
     """
     A session (logged-in or anonymous account) on the Digipad website.
     """
+
     def __init__(self, cookie=None):
         from .__init__ import Options
+
         if isinstance(cookie, Options):
             cookie = get_cookie_from_args(cookie, False)
         elif isinstance(cookie, SessionMixin):
@@ -43,6 +45,7 @@ class Session:
         All the pads on the account. If the account is an anonymous account, there will be no pads.
         """
         from .get_pads import PadsOnAccount
+
         if not self.cookie:
             return PadsOnAccount()
 
@@ -92,10 +95,6 @@ class Session:
 
         for folder in data["pageProps"]["dossiers"]:
             pads.folder_names[folder["id"]] = folder["nom"]
-            pads.folders[folder["id"]] = PadList([
-                pad
-                for pad in pads.all
-                if pad.id in folder["pads"]
-            ])
+            pads.folders[folder["id"]] = PadList([pad for pad in pads.all if pad.id in folder["pads"]])
 
         return pads

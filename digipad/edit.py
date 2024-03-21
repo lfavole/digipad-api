@@ -17,6 +17,7 @@ class PadConnection:
     """
     A connection on a pad that can run commands.
     """
+
     def __init__(self, pad: "Pad", session=None):
         from .session import Session  # avoid circular import
 
@@ -62,6 +63,9 @@ class PadConnection:
         return socket
 
     def close(self):
+        """
+        Disconnect from the pad and remove the socket.
+        """
         if self.socket:
             self.socket.disconnect()
             self.socket = None
@@ -83,6 +87,7 @@ class Pad:
     """
     A pad.
     """
+
     id: int
     hash: str = ""
     title: str = ""
@@ -142,8 +147,7 @@ class Pad:
         with zipfile.ZipFile(output_file) as archive:
             data = json.loads(archive.read("donnees.json"))
         output_file.rename(
-            output_file.parent
-            / f"{data['pad']['titre']}_{self.id}_{dt.datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
+            output_file.parent / f"{data['pad']['titre']}_{self.id}_{dt.datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
         )
         return output_file
 
@@ -212,6 +216,7 @@ class Pad:
 
 class PadList(list[Pad]):
     """A list of pads that can be searched for a specific pad."""
+
     def get(self, pad_id, session=None):
         """Search for a pad in the list and return it, otherwise create a `Pad` object without metadata."""
         pad_hash = ""

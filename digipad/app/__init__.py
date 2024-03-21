@@ -33,14 +33,17 @@ def get_template(head1="", head2=""):
     if error:
         del session["error"]
     return (
-        TEMPLATE
-        .replace(
+        TEMPLATE.replace(
             "%(userinfo)s",
-            "Impossible de vérifier la connexion"
-            if userinfo and userinfo.connection_error
-            else 'Non connecté – <a href="/login">Se connecter</a>'
-            if userinfo is None or not userinfo.cookie
-            else f'{escape(str(userinfo))} – <a href="/logout">Se déconnecter</a>',
+            (
+                "Impossible de vérifier la connexion"
+                if userinfo and userinfo.connection_error
+                else (
+                    'Non connecté – <a href="/login">Se connecter</a>'
+                    if userinfo is None or not userinfo.cookie
+                    else f'{escape(str(userinfo))} – <a href="/logout">Se déconnecter</a>'
+                )
+            ),
         )
         .replace(
             "%(error)s",
@@ -149,13 +152,18 @@ def create():
         pad.connection.close()
         return JSONResponse({"ok": True, "message": message})
 
-    return get_template("""\
+    return (
+        get_template(
+            """\
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pell@1/dist/pell.min.css">
 <script src="https://cdn.jsdelivr.net/npm/pell@1/dist/pell.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/voca@1/index.min.js"></script>
-""", '<script src="/static/editor.js"></script>') % {
-        "title": "Création de capsules",
-        "body": """\
+""",
+            '<script src="/static/editor.js"></script>',
+        )
+        % {
+            "title": "Création de capsules",
+            "body": """\
 <form method="post" action="javascript:;">
 <p>
     <label for="pads">Pads <small>(un par ligne)</small> :</label>
@@ -190,7 +198,8 @@ def create():
 <pre class="output" data-operation="Creating block"></pre>
 </form>
 """,
-    }
+        }
+    )
 
 
 @app.route("/zip", methods=["POST"])
@@ -224,13 +233,18 @@ def export():
         message = f"Exporting #{pad.id}... OK ({url})\n"
         return JSONResponse({"ok": True, "message": message})
 
-    return get_template("""\
+    return (
+        get_template(
+            """\
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pell@1/dist/pell.min.css">
 <script src="https://cdn.jsdelivr.net/npm/pell@1/dist/pell.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/voca@1/index.min.js"></script>
-""", '<script src="/static/editor.js"></script>') % {
-        "title": "Exportation des pads",
-        "body": """\
+""",
+            '<script src="/static/editor.js"></script>',
+        )
+        % {
+            "title": "Exportation des pads",
+            "body": """\
 <form method="post" action="javascript:;">
 <p>
     <label for="pads">Pads <small>(un par ligne)</small> :</label>
@@ -243,7 +257,8 @@ def export():
 <pre class="output" data-operation="Renaming column"></pre>
 </form>
 """,
-    }
+        }
+    )
 
 
 @app.route("/list", methods=["GET", "POST"])
@@ -276,13 +291,18 @@ def list_pads():
 """,
         }
 
-    return get_template("""\
+    return (
+        get_template(
+            """\
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pell@1/dist/pell.min.css">
 <script src="https://cdn.jsdelivr.net/npm/pell@1/dist/pell.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/voca@1/index.min.js"></script>
-""", '<script src="/static/editor.js"></script>') % {
-        "title": "Liste des pads",
-        "body": """\
+""",
+            '<script src="/static/editor.js"></script>',
+        )
+        % {
+            "title": "Liste des pads",
+            "body": """\
 <form method="post">
 <p>
     <label for="pads">Pads <small>(un par ligne)</small> :</label>
@@ -294,7 +314,8 @@ def list_pads():
 </p>
 </form>
 """,
-    }
+        }
+    )
 
 
 @app.route("/rename-column", methods=["GET", "POST"])
@@ -309,13 +330,18 @@ def rename_column():
         pad.connection.close()
         return JSONResponse({"ok": True, "message": message})
 
-    return get_template("""\
+    return (
+        get_template(
+            """\
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pell@1/dist/pell.min.css">
 <script src="https://cdn.jsdelivr.net/npm/pell@1/dist/pell.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/voca@1/index.min.js"></script>
-""", '<script src="/static/editor.js"></script>') % {
-        "title": "Renommage des colonnes",
-        "body": """\
+""",
+            '<script src="/static/editor.js"></script>',
+        )
+        % {
+            "title": "Renommage des colonnes",
+            "body": """\
 <form method="post" action="javascript:;">
 <p>
     <label for="pads">Pads <small>(un par ligne)</small> :</label>
@@ -336,7 +362,8 @@ def rename_column():
 <pre class="output" data-operation="Renaming column"></pre>
 </form>
 """,
-    }
+        }
+    )
 
 
 if __name__ == "__main__":

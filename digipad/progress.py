@@ -1,5 +1,6 @@
 class Progress:
     """A utility that print a progress message and its confirmation."""
+
     def __init__(self, message):
         self.message = message
         self.first = True

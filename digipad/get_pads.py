@@ -13,6 +13,7 @@ class PadsOnAccount:
     """
     A list of all pads in an account.
     """
+
     session: Session = field(default_factory=Session)
     created: PadList = field(default_factory=PadList)
     visited: PadList = field(default_factory=PadList)
@@ -27,12 +28,14 @@ class PadsOnAccount:
         """
         All the known pads on the account.
         """
-        return PadList([
-            *self.created,
-            *self.visited,
-            *self.admin,
-            *self.favourite,
-        ])
+        return PadList(
+            [
+                *self.created,
+                *self.visited,
+                *self.admin,
+                *self.favourite,
+            ]
+        )
 
     @overload
     def get(self, pad_id: "int | str", default=NOT_PROVIDED) -> Pad:
