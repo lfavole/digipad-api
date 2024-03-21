@@ -1,11 +1,10 @@
 import datetime as dt
 import json
-from flask.sessions import SessionMixin
 
 import requests
+from flask.sessions import SessionMixin
 
 from .edit import Pad, PadConnection, PadList
-from .get_pads import PadsOnAccount
 from .utils import UserInfo, extract_data, get_cookie_from_args, get_userinfo
 
 
@@ -43,6 +42,7 @@ class Session:
         """
         All the pads on the account. If the account is an anonymous account, there will be no pads.
         """
+        from .get_pads import PadsOnAccount
         if not self.cookie:
             return PadsOnAccount()
 
@@ -82,6 +82,7 @@ class Session:
             return ret
 
         pads = PadsOnAccount(
+            session=self,
             created=format_pads(data["pageProps"]["padsCrees"]),
             visited=format_pads(data["pageProps"]["padsRejoints"]),
             admin=format_pads(data["pageProps"]["padsAdmins"]),

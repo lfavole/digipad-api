@@ -116,6 +116,8 @@ class Pad:
         """
         Export a pad and return the path of the exported ZIP file.
         """
+        if not self.connection.userinfo:
+            raise ValueError("Not logged in")
         req = requests.post(
             "https://digipad.app/api/exporter-pad",
             json={"padId": self.id, "identifiant": self.connection.userinfo.username, "admin": ""},
@@ -210,7 +212,7 @@ class Pad:
 
 class PadList(list[Pad]):
     """A list of pads that can be searched for a specific pad."""
-    def get(self, pad_id):
+    def get(self, pad_id, session=None):
         """Search for a pad in the list and return it, otherwise create a `Pad` object without metadata."""
         pad_hash = ""
         if not isinstance(pad_id, int):
@@ -232,4 +234,7 @@ class PadList(list[Pad]):
             if pad.id == pad_id:
                 return pad
 
-        return Pad(pad_id, pad_hash)
+        pad = Pad(pad_id, pad_hash)
+        if session:
+            pad.connection = PadConnection(pad, session)
+        return pad

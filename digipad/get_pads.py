@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from typing import TypeVar, overload
 
 from .edit import Pad, PadList
+from .session import Session
 
 NOT_PROVIDED = object()
 DefaultT = TypeVar("DefaultT")
@@ -12,6 +13,7 @@ class PadsOnAccount:
     """
     A list of all pads in an account.
     """
+    session: Session = field(default_factory=Session)
     created: PadList = field(default_factory=PadList)
     visited: PadList = field(default_factory=PadList)
     admin: PadList = field(default_factory=PadList)
@@ -72,7 +74,7 @@ class PadsOnAccount:
                 continue
 
             try:
-                ret.append(self.all.get(pad_id))
+                ret.append(self.all.get(pad_id, self.session))
             except ValueError:
                 ret.extend(self.get_pads_in_folder(pad_id))
 
