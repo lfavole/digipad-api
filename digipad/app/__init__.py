@@ -57,7 +57,12 @@ def get_template(head1="", head2=""):
 @app.errorhandler(Exception)
 def error_handler(err):
     if request.form.get("format", "html") == "json":
-        return JSONResponse({"ok": False, "error": f"{type(err).__qualname__}: {err}"})
+        return JSONResponse(
+            {"ok": False, "error": f"{type(err).__qualname__}: {err}"},
+            status=getattr(err, "code", 500),
+        )
+    if app.debug:
+        raise err
     session["error"] = f"{type(err).__qualname__}: {err}"
     return redirect("/")
 
@@ -204,7 +209,7 @@ def create():
 
 @app.route("/zip", methods=["POST"])
 def zip():
-    files = request.form.get("files", "").split("\n")
+    files = request.form.get("files", "").splitlines()
     paths: list[Path] = []
     for file in files:
         path = Path(urlparse(file).path).resolve()
@@ -266,7 +271,7 @@ def list_pads():
     if request.method == "POST":
         query = request.form.get("pads", "")
         format = request.form.get("format", "html")
-        pads = Session(session).pads.get_all(query.split("\n"))
+        pads = Session(session).pads.get_all(query.splitlines())
         data = get_pads_table(pads, format != "json", True)
 
         if format == "json":

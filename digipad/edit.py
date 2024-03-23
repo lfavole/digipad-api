@@ -10,7 +10,7 @@ from urllib.parse import quote
 import requests
 import socketio
 
-from .utils import UserInfo, get_anon_userinfo
+from .utils import UserInfo, extract_data, get_anon_userinfo
 
 
 class PadConnection:
@@ -47,8 +47,9 @@ class PadConnection:
             "https://digipad.app",
             headers={"Cookie": "digipad=" + quote(self.session.cookie)},
         )
+        self.socket = socket
 
-        socket.emit(
+        self.run(
             "connexion",
             {
                 "pad": self.pad.id,
@@ -56,10 +57,6 @@ class PadConnection:
                 "nom": self.session.userinfo.name,
             },
         )
-        data = socket.receive()
-        if data[0] != "connexion":
-            raise ValueError(f"Can't log in to pad {self.pad}")
-        self.socket = socket
         return socket
 
     def close(self):
@@ -67,17 +64,18 @@ class PadConnection:
         Disconnect from the pad and remove the socket.
         """
         if self.socket:
+            self.socket.emit("sortie", (self.pad.id, self.userinfo.username))
             self.socket.disconnect()
             self.socket = None
 
-    def run(self, command, *args):
+    def run(self, command, *args, expected=None):
         """
         Run a command on the pad.
         """
         socket = self.connect()
         socket.emit(command, args)
-        ret = socket.receive()
-        if ret[0] != command:
+        ret = socket.receive(timeout=10)
+        if ret[0] != (expected or command):
             raise ValueError(f"Can't run command {command} on pad {self.pad} ({ret})")
         return ret[1]
 
@@ -239,7 +237,48 @@ class PadList(list[Pad]):
             if pad.id == pad_id:
                 return pad
 
-        pad = Pad(pad_id, pad_hash)
+        pad = get_pad_info(pad_id, pad_hash, session=session)
         if session:
             pad.connection = PadConnection(pad, session)
         return pad
+
+
+def format_pads(pads: list[dict], pad_hashes=None, session=None) -> PadList:
+    """
+    Returns a dict that maps pad IDs to pad titles from a Digipad dict.
+    """
+    ret = PadList()
+    for pad in pads:
+        if pad_hashes:
+            pad_hashes[pad["id"]] = pad["token"]
+        pad = Pad(
+            id=pad["id"],
+            hash=pad["token"],
+            title=pad["titre"],
+            code=pad.get("code"),
+            access=pad["acces"],
+            columns=json.loads(pad["colonnes"]) if isinstance(pad["colonnes"], str) else pad["colonnes"],
+            creator=UserInfo.from_json(pad),
+            creation_date=dt.datetime.fromisoformat(pad["date"]),
+        )
+        if session:
+            pad.connection = PadConnection(pad, session)
+        ret.append(pad)
+    return ret
+
+
+def get_pad_info(pad_id, pad_hash, pad_hashes=None, session=None):
+    """
+    Return information about a pad from its ID and its hash.
+    """
+    try:
+        req = requests.get(f"https://digipad.app/p/{pad_id}/{pad_hash}")
+    except OSError:
+        return Pad(pad_id, pad_hash)
+
+    data = extract_data(req)
+    page_props = data.get("pageProps", data)
+    if "pad" not in page_props:
+        return Pad(pad_id, pad_hash)
+
+    return format_pads([page_props["pad"]], pad_hashes, session)[0]

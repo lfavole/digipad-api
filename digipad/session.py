@@ -1,11 +1,8 @@
-import datetime as dt
-import json
-
 import requests
 from flask.sessions import SessionMixin
 
-from .edit import Pad, PadConnection, PadList
-from .utils import UserInfo, extract_data, get_cookie_from_args, get_userinfo
+from .edit import PadList, format_pads
+from .utils import extract_data, get_cookie_from_args, get_userinfo
 
 
 class Session:
@@ -63,33 +60,12 @@ class Session:
 
         pad_hashes = {}
 
-        def format_pads(pads: dict) -> PadList:
-            """
-            Returns a dict that maps pad IDs to pad titles from a Digipad dict.
-            """
-            ret = PadList()
-            for pad in pads:
-                pad_hashes[pad["id"]] = pad["token"]
-                pad = Pad(
-                    id=pad["id"],
-                    hash=pad["token"],
-                    title=pad["titre"],
-                    code=pad.get("code"),
-                    access=pad["acces"],
-                    columns=json.loads(pad["colonnes"]),
-                    creator=UserInfo.from_json(pad),
-                    creation_date=dt.datetime.fromisoformat(pad["date"]),
-                )
-                pad.connection = PadConnection(pad, self)
-                ret.append(pad)
-            return ret
-
         pads = PadsOnAccount(
             session=self,
-            created=format_pads(data["pageProps"]["padsCrees"]),
-            visited=format_pads(data["pageProps"]["padsRejoints"]),
-            admin=format_pads(data["pageProps"]["padsAdmins"]),
-            favourite=format_pads(data["pageProps"]["padsFavoris"]),
+            created=format_pads(data["pageProps"]["padsCrees"], pad_hashes, self),
+            visited=format_pads(data["pageProps"]["padsRejoints"], pad_hashes, self),
+            admin=format_pads(data["pageProps"]["padsAdmins"], pad_hashes, self),
+            favourite=format_pads(data["pageProps"]["padsFavoris"], pad_hashes, self),
             pad_hashes=pad_hashes,
         )
 

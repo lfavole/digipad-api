@@ -41,7 +41,7 @@ window.addEventListener("DOMContentLoaded", () => {
                 formdata.append("pad", pad.id + "/" + pad.hash);
                 formdata.append("format", "json");
 
-                currentLine = `${operation} on ${pad.id}... `;
+                currentLine = `${operation} on #${pad.id}... `;
                 updateText();
                 var req = await fetch(
                     location.href,
