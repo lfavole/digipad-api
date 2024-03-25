@@ -11,8 +11,7 @@ from tabulate import tabulate
 
 from .progress import Progress
 from .session import Session
-from .utils import COOKIE_FILE, get_pads_table, get_secret_key, get_userinfo
-from .utils import login as digipad_login
+from .utils import COOKIE_FILE, get_pads_table, get_secret_key
 
 __version__ = "2024.2.22"
 
@@ -23,6 +22,7 @@ class Options:
 
     delay: int
     cookie: str
+    domain: str
 
 
 pass_opts = click.make_pass_decorator(Options)
@@ -35,10 +35,11 @@ delay_option = click.option("--delay", type=int, default=1)
 @click.version_option(__version__)
 @click.option("--delay", type=int, default=0, help="delay between operations")
 @click.option("--cookie", help="Digipad cookie")
+@click.option("--domain", "--instance", help="domain of Digipad instance")
 @click.pass_context
-def cli(ctx, delay, cookie):
+def cli(ctx, delay, cookie, domain):
     """Main command that handles the default parameters."""
-    ctx.obj = Options(delay, cookie)
+    ctx.obj = Options(delay, cookie, domain)
 
 
 @cli.command()
@@ -125,9 +126,12 @@ def list(opts, pads, format, verbose):  # pylint: disable=W0622
 @click.option("--username", prompt="Username")
 @click.option("--password", prompt="Password", hide_input=True)
 @click.option("--print-cookie", is_flag=True, help="print the cookie and don't save it")
-def login(username, password, print_cookie):
+@pass_opts
+def login(opts, username, password, print_cookie):
     """Log into Digipad and save the cookie."""
-    userinfo = digipad_login(username, password)  # pylint: disable=W0621
+    session = Session(opts)
+    session.login(username, password)
+    userinfo = session.userinfo  # pylint: disable=W0621
     if not userinfo:
         raise ValueError("Not logged in, double-check your username and password")
 
@@ -145,7 +149,10 @@ def login(username, password, print_cookie):
 @pass_opts
 def userinfo(opts, cookie):
     """Print information about the current logged-in user or a specified cookie."""
-    userinfo = Session(cookie or opts).userinfo  # pylint: disable=W0621
+    session = Session(opts)
+    if cookie:
+        session.cookie = cookie
+    userinfo = session.userinfo  # pylint: disable=W0621
     print(f"Logged in as {userinfo}")
     if not userinfo:
         print("Anonymous session")
@@ -153,11 +160,14 @@ def userinfo(opts, cookie):
 
 @cli.command(help="Save the Digipad cookie for later use")
 @click.option("--cookie", prompt="Digipad cookie", hide_input=True)
-def set_cookie(cookie):
+@pass_opts
+def set_cookie(opts, cookie):
     """Save the Digipad cookie for later use."""
     cookie = unquote(cookie)
 
-    userinfo = get_userinfo(cookie)  # pylint: disable=W0621
+    session = Session(opts)
+    session.cookie = cookie
+    userinfo = session.userinfo  # pylint: disable=W0621
     if not userinfo:
         raise ValueError("Not logged in")
 

@@ -10,7 +10,7 @@ from urllib.parse import quote
 import requests
 import socketio
 
-from .utils import UserInfo, extract_data, get_anon_userinfo
+from .utils import UserInfo, extract_data
 
 
 class PadConnection:
@@ -19,7 +19,7 @@ class PadConnection:
     """
 
     def __init__(self, pad: "Pad", session=None):
-        from .session import Session  # avoid circular import
+        from .session import Session
 
         self.pad = pad
         self.session = session or Session()
@@ -40,11 +40,11 @@ class PadConnection:
             return self.socket
 
         if not self.session.userinfo:
-            self.session.userinfo = get_anon_userinfo(self.pad.id, self.pad.hash)
+            self.session.userinfo = self.session.get_anon_userinfo(self.pad.id, self.pad.hash)
 
         socket = socketio.SimpleClient()
         socket.connect(
-            "https://digipad.app",
+            self.session.domain,
             headers={"Cookie": "digipad=" + quote(self.session.cookie)},
         )
         self.socket = socket
@@ -122,7 +122,7 @@ class Pad:
         if not self.connection.userinfo:
             raise ValueError("Not logged in")
         req = requests.post(
-            "https://digipad.app/api/exporter-pad",
+            f"{self.connection.session.domain}/api/exporter-pad",
             json={"padId": self.id, "identifiant": self.connection.userinfo.username, "admin": ""},
             cookies={"digipad": self.connection.userinfo.cookie},
         )
@@ -131,7 +131,7 @@ class Pad:
             raise ValueError("Not logged in")
 
         filename = req.text
-        file = "https://digipad.app/temp/" + filename
+        file = f"{self.connection.session.domain}/temp/" + filename
         req2 = requests.get(file, stream=True)
         req2.raise_for_status()
         if req2.content == b"non_connecte":
@@ -214,6 +214,11 @@ class Pad:
 
 class PadList(list[Pad]):
     """A list of pads that can be searched for a specific pad."""
+    def __init__(self, *args, session=None, **kwargs):
+        from .session import Session
+
+        super().__init__(*args, **kwargs)
+        self.session = session or Session()
 
     def get(self, pad_id, session=None):
         """Search for a pad in the list and return it, otherwise create a `Pad` object without metadata."""
@@ -237,10 +242,26 @@ class PadList(list[Pad]):
             if pad.id == pad_id:
                 return pad
 
-        pad = get_pad_info(pad_id, pad_hash, session=session)
+        pad = self.get_pad_info(pad_id, pad_hash, session=session)
         if session:
             pad.connection = PadConnection(pad, session)
         return pad
+
+    def get_pad_info(self, pad_id, pad_hash, pad_hashes=None, session=None):
+        """
+        Return information about a pad from its ID and its hash.
+        """
+        try:
+            req = requests.get(f"{self.session.domain}/p/{pad_id}/{pad_hash}")
+        except OSError:
+            return Pad(pad_id, pad_hash)
+
+        data = extract_data(req)
+        page_props = data.get("pageProps", data)
+        if "pad" not in page_props:
+            return Pad(pad_id, pad_hash)
+
+        return format_pads([page_props["pad"]], pad_hashes, session)[0]
 
 
 def format_pads(pads: list[dict], pad_hashes=None, session=None) -> PadList:
@@ -265,20 +286,3 @@ def format_pads(pads: list[dict], pad_hashes=None, session=None) -> PadList:
             pad.connection = PadConnection(pad, session)
         ret.append(pad)
     return ret
-
-
-def get_pad_info(pad_id, pad_hash, pad_hashes=None, session=None):
-    """
-    Return information about a pad from its ID and its hash.
-    """
-    try:
-        req = requests.get(f"https://digipad.app/p/{pad_id}/{pad_hash}")
-    except OSError:
-        return Pad(pad_id, pad_hash)
-
-    data = extract_data(req)
-    page_props = data.get("pageProps", data)
-    if "pad" not in page_props:
-        return Pad(pad_id, pad_hash)
-
-    return format_pads([page_props["pad"]], pad_hashes, session)[0]
