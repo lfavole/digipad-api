@@ -2,10 +2,10 @@ import datetime as dt
 import json
 import random
 import sys
+import zipfile
 from html import escape
 from pathlib import Path
 from urllib.parse import urlparse
-import zipfile
 
 from flask import Flask, Response, redirect, request, session, url_for
 from tabulate import tabulate
@@ -33,8 +33,7 @@ def get_template(head1="", head2=""):
     if error:
         del session["error"]
     return (
-        TEMPLATE
-        .replace(
+        TEMPLATE.replace(
             "%(instance)s",
             digipad_session.domain,
         )
@@ -66,11 +65,7 @@ def error_handler(err):
             {"ok": False, "error": f"{type(err).__qualname__}: {err}"},
             status=getattr(err, "code", 500),
         )
-    if (
-        app.debug
-        or "error" in session
-        or request.path == url_for("home") and request.args.get("error")
-    ):
+    if app.debug or "error" in session or request.path == url_for("home") and request.args.get("error"):
         raise err
     session["error"] = f"{type(err).__qualname__}: {err}"
     return redirect(url_for("home", error=1))
@@ -183,10 +178,9 @@ def create_pad():
         message = f"Creating pad {title}... OK\n"
         return JSONResponse({"ok": True, "message": message})
 
-    return (
-        get_template() % {
-            "title": "Création de pads",
-            "body": """\
+    return get_template() % {
+        "title": "Création de pads",
+        "body": """\
 <form method="post" action="javascript:;">
 <p>
     <label for="titles">Titres des pads à créer <small>(un par ligne)</small> :</label>
@@ -199,8 +193,7 @@ def create_pad():
 <pre class="output" data-operation="Creating pad"></pre>
 </form>
 """,
-        }
-    )
+    }
 
 
 @app.route("/create", methods=["GET", "POST"])

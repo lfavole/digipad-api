@@ -214,6 +214,7 @@ class Pad:
 
 class PadList(list[Pad]):
     """A list of pads that can be searched for a specific pad."""
+
     def __init__(self, *args, session=None, **kwargs):
         from .session import Session
 

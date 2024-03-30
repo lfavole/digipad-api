@@ -120,6 +120,4 @@ class PadsOnAccount:
             data = req.json()
         except OSError:
             raise ValueError(f"Can't create pad {title} ({req.text})") from None
-        self.created.extend(
-            format_pads([data], self.pad_hashes, self.session)
-        )
+        self.created.extend(format_pads([data], self.pad_hashes, self.session))
