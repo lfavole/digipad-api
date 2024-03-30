@@ -1,6 +1,9 @@
 import datetime as dt
+import functools
 import json
+import os
 import random
+import subprocess as sp
 import sys
 import zipfile
 from html import escape
@@ -26,6 +29,27 @@ class JSONResponse(Response):
         super().__init__(response, *args, content_type="application/json", **kwargs)
 
 
+@functools.lru_cache
+def get_version():
+    version = os.environ.get("VERCEL_GIT_COMMIT_SHA")
+    if version:
+        return version[0:7]
+
+    if (Path(__file__).resolve().parent.parent.parent / ".git").exists():
+        try:
+            version = sp.check_output(["git", "describe", "--always", "HEAD"], text=True).strip()
+            if version:
+                return version
+        except (sp.CalledProcessError, OSError):
+            pass
+
+    if not version:
+        from ..__init__ import __version__
+
+        return __version__
+    return "Inconnu"
+
+
 def get_template(head1="", head2=""):
     digipad_session = Session(session)
     userinfo = digipad_session.userinfo
@@ -36,6 +60,10 @@ def get_template(head1="", head2=""):
         TEMPLATE.replace(
             "%(instance)s",
             digipad_session.domain,
+        )
+        .replace(
+            "%(version)s",
+            get_version(),
         )
         .replace(
             "%(userinfo)s",
