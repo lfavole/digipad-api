@@ -6,6 +6,7 @@ body {
 }
 aside {
     float: right;
+    text-align: right;
 }
 textarea {
     padding: 0.5em;

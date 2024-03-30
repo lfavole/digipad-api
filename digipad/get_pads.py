@@ -1,7 +1,9 @@
 from dataclasses import dataclass, field
 from typing import TypeVar, overload
 
-from .edit import Pad, PadList
+import requests
+
+from .edit import Pad, PadList, format_pads
 from .session import Session
 
 NOT_PROVIDED = object()
@@ -103,3 +105,21 @@ class PadsOnAccount:
                 return self.folders[folder_id]
 
         raise ValueError(f"Can't find folder {folder_name}")
+
+    def create_pad(self, title):
+        """
+        Create a pad with the specified title.
+        """
+        req = requests.post(
+            f"{self.session.domain}/api/creer-pad",
+            json={"titre": title, "identifiant": self.session.userinfo.username},
+            cookies={"digipad": self.session.userinfo.cookie},
+        )
+        req.raise_for_status()
+        try:
+            data = req.json()
+        except OSError:
+            raise ValueError(f"Can't create pad {title} ({req.text})") from None
+        self.created.extend(
+            format_pads([data], self.pad_hashes, self.session)
+        )

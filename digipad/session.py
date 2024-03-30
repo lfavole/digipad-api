@@ -6,13 +6,15 @@ from flask.sessions import SessionMixin
 from .edit import PadList, format_pads
 from .utils import UserInfo, extract_data, get_cookie_from_args
 
+DEFAULT_INSTANCE = "https://digipad.app"
+
 
 class Session:
     """
     A session (logged-in or anonymous account) on the Digipad website.
     """
 
-    def __init__(self, cookie=None, domain="https://digipad.app"):
+    def __init__(self, cookie=None, domain=DEFAULT_INSTANCE):
         from .__init__ import Options
 
         if isinstance(cookie, Options):
@@ -20,7 +22,9 @@ class Session:
             cookie = get_cookie_from_args(opts, False)
             domain = getattr(opts, "domain", domain)
         elif isinstance(cookie, SessionMixin):
-            cookie = cookie.get("digipad_cookie")
+            opts = cookie
+            cookie = opts.get("digipad_cookie")
+            domain = opts.get("digipad_instance") or domain
 
         self.domain = domain
         if cookie:

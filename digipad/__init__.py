@@ -43,6 +43,20 @@ def cli(ctx, delay, cookie, domain):
 
 
 @cli.command()
+@click.argument("TITLES", nargs=-1, required=True)
+@delay_option
+@pass_opts
+def create_pad(opts, titles, delay):
+    """Create a pad."""
+    pads = Session(opts).pads
+    for pad_title in titles:
+        with Progress(f"Creating pad {pad_title}") as prog:
+            pads.create_pad(pad_title)
+            prog.end()
+            time.sleep(delay)
+
+
+@cli.command()
 @pad_argument
 @delay_option
 @click.option("--title", default="", help="title of the block")

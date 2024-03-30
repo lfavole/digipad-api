@@ -10,9 +10,8 @@ import zipfile
 from flask import Flask, Response, redirect, request, session, url_for
 from tabulate import tabulate
 
-from ..session import Session
+from ..session import DEFAULT_INSTANCE, Session
 from ..utils import get_pads_table
-from ..utils import login as digipad_login
 
 app = Flask(__name__)
 
@@ -28,12 +27,18 @@ class JSONResponse(Response):
 
 
 def get_template(head1="", head2=""):
-    userinfo = Session(session).userinfo
+    digipad_session = Session(session)
+    userinfo = digipad_session.userinfo
     error = session.get("error")
     if error:
         del session["error"]
     return (
-        TEMPLATE.replace(
+        TEMPLATE
+        .replace(
+            "%(instance)s",
+            digipad_session.domain,
+        )
+        .replace(
             "%(userinfo)s",
             (
                 "Impossible de vérifier la connexion"
@@ -61,10 +66,14 @@ def error_handler(err):
             {"ok": False, "error": f"{type(err).__qualname__}: {err}"},
             status=getattr(err, "code", 500),
         )
-    if app.debug:
+    if (
+        app.debug
+        or "error" in session
+        or request.path == url_for("home") and request.args.get("error")
+    ):
         raise err
     session["error"] = f"{type(err).__qualname__}: {err}"
-    return redirect("/")
+    return redirect(url_for("home", error=1))
 
 
 @app.route("/")
@@ -74,6 +83,7 @@ def home():
         "body": f"""\
 <ul>
     <li><a href="{url_for("create")}">Création de capsules</a></li>
+    <li><a href="{url_for("create_pad")}">Création de pads</a></li>
     <li><a href="{url_for("export")}">Exportation des pads</a></li>
     <li><a href="{url_for("list_pads")}">Liste des pads</a></li>
     <li><a href="{url_for("rename_column")}">Renommage des colonnes</a></li>
@@ -84,8 +94,8 @@ def home():
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    userinfo = Session(session).userinfo
-    if userinfo is not None and userinfo.cookie:
+    digipad_session = Session(session)
+    if digipad_session.userinfo.logged_in:
         return redirect(url_for("home"))
 
     if request.method == "POST":
@@ -96,8 +106,8 @@ def login():
 
         username = request.form.get("username")
         password = request.form.get("password")
-        userinfo = digipad_login(username, password)
-        session["digipad_cookie"] = userinfo.cookie
+        digipad_session.login(username, password)
+        session["digipad_cookie"] = digipad_session.userinfo.cookie
         return redirect(url_for("home"))
 
     return get_template() % {
@@ -132,11 +142,65 @@ def login():
     }
 
 
+@app.route("/instance", methods=["GET", "POST"])
+def instance():
+    digipad_session = Session(session)
+    if request.method == "POST":
+        session["digipad_instance"] = request.form.get("instance") or DEFAULT_INSTANCE
+        return redirect(url_for("home"))
+
+    return get_template() % {
+        "title": "Changement d'instance",
+        "body": f"""\
+<form method="post">
+<p>
+    <label for="instance">Instance :</label>
+    <input type="text" name="instance" id="instance" value="{escape(digipad_session.domain)}">
+</p>
+<p>
+    <input type="submit" value="OK">
+</p>
+</form>
+""",
+    }
+
+
 @app.route("/logout")
 def logout():
     if "digipad_cookie" in session:
         del session["digipad_cookie"]
     return redirect(url_for("home"))
+
+
+@app.route("/create-pad", methods=["GET", "POST"])
+def create_pad():
+    if request.method == "POST":
+        title = request.form.get("title", "")
+        if not title.strip():
+            raise ValueError("Empty title")
+        pads = Session(session).pads
+        pads.create_pad(title)
+        message = f"Creating pad {title}... OK\n"
+        return JSONResponse({"ok": True, "message": message})
+
+    return (
+        get_template() % {
+            "title": "Création de pads",
+            "body": """\
+<form method="post" action="javascript:;">
+<p>
+    <label for="titles">Titres des pads à créer <small>(un par ligne)</small> :</label>
+    <br>
+    <textarea name="titles" id="titles"></textarea>
+</p>
+<p>
+    <input type="submit" value="OK">
+</p>
+<pre class="output" data-operation="Creating pad"></pre>
+</form>
+""",
+        }
+    )
 
 
 @app.route("/create", methods=["GET", "POST"])

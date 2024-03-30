@@ -15,20 +15,24 @@ window.addEventListener("DOMContentLoaded", () => {
             var updateText = () => {output.textContent = text + currentLine};
             var nextLine = () => {text += currentLine; currentLine = ""};
 
-            var formdata = new FormData();
-            formdata.append("pads", form.pads.value);
-            formdata.append("format", "json");
+            if(form.titles) {
+                var pads = form.titles.value.split("\n");
+            } else {
+                var formdata = new FormData();
+                formdata.append("pads", form.pads.value);
+                formdata.append("format", "json");
 
-            currentLine = "Fetching pads list... ";
-            updateText();
-            var req = await fetch(
-                "/list",
-                {
-                    method: "POST",
-                    body: formdata
-                },
-            );
-            var pads = await req.json();
+                currentLine = "Fetching pads list... ";
+                updateText();
+                var req = await fetch(
+                    "/list",
+                    {
+                        method: "POST",
+                        body: formdata
+                    },
+                );
+                var pads = await req.json();
+            }
             currentLine += `${pads.length} pad${pads.length >= 2 ? "s" : ""} found\n`;
             updateText();
 
@@ -37,11 +41,20 @@ window.addEventListener("DOMContentLoaded", () => {
 
                 var pad = pads[i];
                 var formdata = new FormData(form);
-                formdata.delete("pads");
-                formdata.append("pad", pad.id + "/" + pad.hash);
+                if(form.titles) {
+                    formdata.delete("titles");
+                    formdata.append("title", pad);
+                } else {
+                    formdata.delete("pads");
+                    formdata.append("pad", pad.id + "/" + pad.hash);
+                }
                 formdata.append("format", "json");
 
-                currentLine = `${operation} on #${pad.id}... `;
+                if(form.titles) {
+                    currentLine = `${operation} ${pad}... `;
+                } else {
+                    currentLine = `${operation} on #${pad.id}... `;
+                }
                 updateText();
                 var req = await fetch(
                     location.href,
