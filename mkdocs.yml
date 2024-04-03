@@ -60,6 +60,7 @@ markdown_extensions:
   - attr_list
   - markdown_include.include:
       base_path: docs
+  - mkdocs-click
   - pymdownx.details
   - pymdownx.emoji:
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
