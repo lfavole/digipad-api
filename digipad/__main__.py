@@ -1,10 +1,12 @@
 import sys
-from pathlib import Path
 
-if __package__ is None and not getattr(sys, "frozen", False):
+if __package__ is None and not hasattr(sys, "frozen"):
+    # direct call of __main__.py
+    from pathlib import Path
+
     sys.path.insert(0, str(Path(__file__).absolute().parent.parent))
 
-import digipad  # pylint: disable=C0413
+from digipad import main  # pylint: disable=C0413
 
 if __name__ == "__main__":
-    digipad.main()
+    main()

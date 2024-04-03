@@ -1,0 +1,71 @@
+# Project information
+site_name: digipad-api
+site_url: https://lfavole.github.io/digipad-api/
+
+# Repository
+repo_name: lfavole/digipad-api
+repo_url: https://github.com/lfavole/digipad-api
+
+theme:
+  name: material
+  icon:
+    logo: material/bulletin-board
+    repo: fontawesome/brands/github
+
+  palette:
+    # Palette toggle for automatic mode
+    - primary: light blue
+      accent: light blue
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+
+    # Palette toggle for light mode
+    - primary: light blue
+      accent: light blue
+      scheme: default
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - primary: green
+      accent: green
+      scheme: slate
+      toggle:
+        icon: material/weather-night
+        name: Switch to system preference
+
+  features:
+    - content.code.copy
+    - content.tooltips
+    - navigation.instant
+    - navigation.instant.progress
+    - toc.follow
+
+plugins:
+  - minify:
+      minify_html: true
+      minify_js: true
+      minify_css: true
+      htmlmin_opts:
+          remove_comments: true
+      cache_safe: true
+  - privacy
+  - search
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - markdown_include.include:
+      base_path: docs
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+  - pymdownx.superfences
+  - toc:
+      permalink: True
+
+watch:
+  - README.md

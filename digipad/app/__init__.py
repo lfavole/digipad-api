@@ -44,7 +44,7 @@ def get_version():
             pass
 
     if not version:
-        from ..__init__ import __version__
+        from .. import __version__
 
         return __version__
     return "Inconnu"

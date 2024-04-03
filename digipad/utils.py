@@ -11,7 +11,7 @@ from urllib.parse import unquote
 import requests
 
 if typing.TYPE_CHECKING:
-    from .__init__ import Options
+    from . import Options
     from .edit import PadList
 
 
@@ -83,7 +83,7 @@ def get_cookie_from_args(args, needed=True):
     """
     Returns a Digipad cookie, checking first in the arguments. If `needed`, raise an exception.
     """
-    from .__init__ import Options
+    from . import Options
 
     if args and isinstance(args, Options) and args.cookie:
         return unquote(args.cookie)

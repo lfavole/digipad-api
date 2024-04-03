@@ -15,7 +15,7 @@ class Session:
     """
 
     def __init__(self, cookie=None, domain=DEFAULT_INSTANCE):
-        from .__init__ import Options
+        from . import Options
 
         if isinstance(cookie, Options):
             opts = cookie
