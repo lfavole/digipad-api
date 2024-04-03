@@ -51,6 +51,7 @@ plugins:
       htmlmin_opts:
           remove_comments: true
       cache_safe: true
+  - mkdocstrings
   - privacy
   - search
 
