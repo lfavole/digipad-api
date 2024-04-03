@@ -29,8 +29,8 @@ theme:
         name: Switch to dark mode
 
     # Palette toggle for dark mode
-    - primary: green
-      accent: green
+    - primary: light blue
+      accent: light blue
       scheme: slate
       toggle:
         icon: material/weather-night
