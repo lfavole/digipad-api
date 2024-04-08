@@ -15,9 +15,7 @@ class Session:
     """
 
     def __init__(self, cookie=None, domain=DEFAULT_INSTANCE):
-        from . import Options
-
-        if isinstance(cookie, Options):
+        if type(cookie).__name__ == "Options":
             opts = cookie
             cookie = get_cookie_from_args(opts, False)
             domain = getattr(opts, "domain", domain)
@@ -115,7 +113,7 @@ class Session:
         from .get_pads import PadsOnAccount
 
         if not self.cookie:
-            return PadsOnAccount()
+            return PadsOnAccount(session=self)
 
         req = requests.get(
             f"{self.domain}/u/" + self.userinfo.username,
@@ -124,7 +122,7 @@ class Session:
         )
         if 300 <= req.status_code < 400:
             # redirected to home page = not logged in
-            return PadsOnAccount()
+            return PadsOnAccount(session=self)
         req.raise_for_status()
 
         data = extract_data(req)

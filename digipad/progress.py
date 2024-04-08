@@ -25,7 +25,7 @@ class Progress:
         return self
 
     def __exit__(self, exc, value, tb):
-        if exc:
+        if not exc:
             self.end()
             print()
         else:
