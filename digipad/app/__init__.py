@@ -3,6 +3,7 @@ import functools
 import json
 import os
 import random
+import re
 import subprocess as sp
 import sys
 import zipfile
@@ -200,10 +201,20 @@ def create_pad():
     if request.method == "POST":
         title = request.form.get("title", "")
         template = request.form.get("template", "")
+        replacements = request.form.get("replacements", "")
+        dry_run = request.form.get("dry_run", "")
         if not title.strip():
             raise ValueError("Empty title")
+
+        for repl in replacements.splitlines():
+            a, _, b = repl.partition("->")
+            if not _:
+                raise ValueError(f"Incorrect replacement string: {repl}")
+            title = re.sub(a, b, title)
+
         pads = Session(session).pads
-        pads.create_pad(title, template)
+        if not dry_run:
+            pads.create_pad(title, template)
         message = f"Creating pad {title}... OK\n"
         return JSONResponse({"ok": True, "message": message})
 
@@ -219,6 +230,18 @@ def create_pad():
 <p>
     <label for="template">Modèle :</label>
     <input type="text" name="template" id="template">
+</p>
+<p>
+    <label for="replacements">
+        Remplacements à faire dans les titres
+        <small>(un par ligne sous la forme <code>a->b</code>)</small> :
+    </label>
+    <br>
+    <textarea name="replacements" id="replacements"></textarea>
+</p>
+<p>
+    <label for="dry_run">Test :</label>
+    <input type="checkbox" name="dry_run" id="dry_run">
 </p>
 <p>
     <input type="submit" value="OK">
