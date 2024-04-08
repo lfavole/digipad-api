@@ -106,10 +106,32 @@ class PadsOnAccount:
 
         raise ValueError(f"Can't find folder {folder_name}")
 
-    def create_pad(self, title):
+    def copy_pad(self, pad_id: int | str):
+        """
+        Copy the pad with the specified ID.
+        """
+        pad = self.get(pad_id)
+        req = requests.post(
+            f"{self.session.domain}/api/dupliquer-pad",
+            json={"padId": pad.id, "identifiant": self.session.userinfo.username},
+            cookies={"digipad": self.session.userinfo.cookie},
+        )
+        req.raise_for_status()
+        try:
+            data = req.json()
+        except OSError:
+            raise ValueError(f"Can't copy pad {pad.title} ({req.text})") from None
+        self.created.extend(format_pads([data], self.pad_hashes, self.session))
+
+    def create_pad(self, title, template: int | str | None = None):
         """
         Create a pad with the specified title.
         """
+        if template:
+            self.copy_pad(template)
+            self.created[-1].rename(title)
+            return
+
         req = requests.post(
             f"{self.session.domain}/api/creer-pad",
             json={"titre": title, "identifiant": self.session.userinfo.username},

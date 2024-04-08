@@ -44,14 +44,15 @@ def cli(ctx, delay, cookie, domain):
 
 @cli.command()
 @click.argument("TITLES", nargs=-1, required=True)
+@click.option("--template", help="pad to use as a template")
 @delay_option
 @pass_opts
-def create_pad(opts, titles, delay):
+def create_pad(opts, titles, template, delay):
     """Create a pad."""
     pads = Session(opts).pads
     for pad_title in titles:
         with Progress(f"Creating pad {pad_title}") as prog:
-            pads.create_pad(pad_title)
+            pads.create_pad(pad_title, template)
             prog.end()
             time.sleep(delay)
 

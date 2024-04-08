@@ -199,10 +199,11 @@ def logout():
 def create_pad():
     if request.method == "POST":
         title = request.form.get("title", "")
+        template = request.form.get("template", "")
         if not title.strip():
             raise ValueError("Empty title")
         pads = Session(session).pads
-        pads.create_pad(title)
+        pads.create_pad(title, template)
         message = f"Creating pad {title}... OK\n"
         return JSONResponse({"ok": True, "message": message})
 
@@ -214,6 +215,10 @@ def create_pad():
     <label for="titles">Titres des pads à créer <small>(un par ligne)</small> :</label>
     <br>
     <textarea name="titles" id="titles"></textarea>
+</p>
+<p>
+    <label for="template">Modèle :</label>
+    <input type="text" name="template" id="template">
 </p>
 <p>
     <input type="submit" value="OK">

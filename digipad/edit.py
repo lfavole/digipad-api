@@ -211,6 +211,17 @@ class Pad:
             self.connection.userinfo.username,
         )
 
+    def rename(self, title):
+        """
+        Rename the pad.
+        """
+        self.connection.run(
+            "modifiertitre",
+            str(self.id),
+            title,
+            self.connection.userinfo.username,
+        )
+
 
 class PadList(list[Pad]):
     """A list of pads that can be searched for a specific pad."""
