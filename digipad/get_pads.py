@@ -106,7 +106,7 @@ class PadsOnAccount:
 
         raise ValueError(f"Can't find folder {folder_name}")
 
-    def copy_pad(self, pad_id: int | str):
+    def copy_pad(self, pad_id: "int | str"):
         """
         Copy the pad with the specified ID.
         """
@@ -123,7 +123,7 @@ class PadsOnAccount:
             raise ValueError(f"Can't copy pad {pad.title} ({req.text})") from None
         self.created.extend(format_pads([data], self.pad_hashes, self.session))
 
-    def create_pad(self, title, template: int | str | None = None):
+    def create_pad(self, title, template: "int | str | None" = None):
         """
         Create a pad with the specified title.
         """
