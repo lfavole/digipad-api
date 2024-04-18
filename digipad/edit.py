@@ -103,6 +103,10 @@ class Pad:
         return f"#{self.id}"
 
     @property
+    def url(self):
+        return f"{self.connection.session.domain}/p/{self.id}/{self.hash}"
+
+    @property
     def connection(self):
         """
         The connection associated to the pad. One is automatically created when needed.

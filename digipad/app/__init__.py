@@ -15,7 +15,7 @@ from flask import Flask, Response, redirect, request, session, url_for
 from tabulate import tabulate
 
 from ..session import DEFAULT_INSTANCE, Session
-from ..utils import get_pads_table
+from ..utils import get_pads_table, table_verbose_names
 
 app = Flask(__name__)
 
@@ -385,7 +385,7 @@ def list_pads():
         query = request.form.get("pads", "")
         format = request.form.get("format", "html")
         pads = Session(session).pads.get_all(query.splitlines())
-        data = get_pads_table(pads, format != "json", True)
+        data = get_pads_table(pads, format != "json", True, True)
 
         if format == "json":
             return Response(
@@ -396,8 +396,16 @@ def list_pads():
         if not pads:
             return get_template() % {
                 "title": "Liste des pads",
-                "body": "<p>Aucun pad n'a été trouvé avec votre requête :</p><pre>{escape(query)}</pre>",
+                "body": f"<p>Aucun pad n'a été trouvé avec votre requête :</p><pre>{escape(query)}</pre>",
             }
+
+        data = [
+            {
+                k: (f'<a href="{v}">{v}</a>' if k == table_verbose_names["url"] else escape(str(v)))
+                for k, v in line.items()
+            }
+            for line in data
+        ]
 
         return get_template() % {
             "title": "Liste des pads",
@@ -405,7 +413,7 @@ def list_pads():
 <p>Les pads correspondant à la requête</p>
 <pre>{escape(query)}</pre>
 <p>sont :</p>
-{tabulate(data, tablefmt="html", headers="keys")}
+{tabulate(data, tablefmt="unsafehtml", headers="keys")}
 """,
         }
 

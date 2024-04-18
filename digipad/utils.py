@@ -115,22 +115,26 @@ def extract_data(response: requests.Response):
     return json.loads(match[1])
 
 
-def get_pads_table(pads: "PadList", verbose=True, all_data=False):
-    """Return a `list` of `dict`s containing information about each pad in a pad list."""
-    verbose_names = {
-        "id": "Pad ID",
-        "hash": "Pad hash",
-        "title": "Pad title",
-        "access": "Access",
-        "code": "PIN code",
-        "columns": "Columns",
-    }
+table_verbose_names = {
+    "url": "URL",
+    "id": "Pad ID",
+    "hash": "Pad hash",
+    "title": "Pad title",
+    "access": "Access",
+    "code": "PIN code",
+    "columns": "Columns",
+}
 
+
+def get_pads_table(pads: "PadList", verbose=True, all_data=False, url=False):
+    """Return a `list` of `dict`s containing information about each pad in a pad list."""
     data = []
     for pad in pads:
+        url_dict = {"url": pad.url} if url else {}
         if all_data:
             data.append(
                 {
+                    **url_dict,
                     "id": pad.id,
                     "hash": pad.hash,
                     "title": pad.title,
@@ -142,6 +146,7 @@ def get_pads_table(pads: "PadList", verbose=True, all_data=False):
         else:
             data.append(
                 {
+                    **url_dict,
                     "id": pad.id,
                     "title": pad.title,
                 }
@@ -153,7 +158,7 @@ def get_pads_table(pads: "PadList", verbose=True, all_data=False):
             """Replace the keys by the verbose names in the specified `item`."""
             ret = {}
             for key, value in item.items():
-                ret[verbose_names.get(key, key)] = value
+                ret[table_verbose_names.get(key, key)] = value
             return ret
 
         return [fix_dict(item) for item in data]
