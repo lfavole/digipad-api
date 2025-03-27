@@ -1,5 +1,5 @@
 class Progress:
-    """A utility that print a progress message and its confirmation."""
+    """A utility that prints a progress message and its confirmation."""
 
     def __init__(self, message):
         self.message = message
@@ -24,10 +24,10 @@ class Progress:
         self.start(self.message)
         return self
 
-    def __exit__(self, exc, value, tb):
+    def __exit__(self, exc, _value, _tb):
         if not exc:
             self.end()
             print()
         else:
             self.ended = True
-            print("ERROR: ", end="")
+            print("ERROR: ", end="", flush=True)
